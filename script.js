@@ -26,7 +26,6 @@ onAuthStateChanged(auth, (user) => {
     if (user) {
         document.getElementById('loginScreen').classList.add('hidden');
         document.getElementById('top-nav').classList.remove('hidden');
-        // Ao logar, exibe o módulo Logística de forma segura
         switchGlobalModule('module-logistica');
     } else {
         document.getElementById('loginScreen').classList.remove('hidden');
@@ -84,22 +83,18 @@ window.alterarSenha = async function() {
 }
 
 // ================= CONTROLE NAVEGAÇÃO GLOBAL =================
-// DEBUG: Função ajustada para não quebrar o CSS de layout em bloco da página
 window.switchGlobalModule = function(moduleId) {
     currentModule = moduleId;
     
-    // Oculta módulos
     document.getElementById('module-logistica').classList.add('hidden');
     document.getElementById('module-ra').classList.add('hidden');
     
-    // Reseta visual dos botões
     const btnLog = document.getElementById('gnav-logistica');
     const btnRa = document.getElementById('gnav-ra');
     
     btnLog.className = "px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition";
     btnRa.className = "px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition";
 
-    // Mostra o módulo atual e seleciona o botão (Apenas remove hidden, mantendo o block display nativo)
     document.getElementById(moduleId).classList.remove('hidden');
     
     if(moduleId === 'module-logistica') {
@@ -211,7 +206,7 @@ function processNewData(data) {
 function updateDashboard() {
     document.getElementById('emptyState').classList.add('hidden');
     document.getElementById('uiArea').classList.remove('hidden');
-    document.getElementById('uiArea').classList.add('flex'); // uiArea requer flex-col interno
+    document.getElementById('uiArea').classList.add('flex');
     renderTable();
     generateTextForTeam(); 
     renderCharts();
@@ -397,6 +392,7 @@ function parseDateBRAndGetWeek(dateStr) {
     }
 }
 
+// Função de busca pelas colunas melhorada
 function findKeyByKeywords(obj, keywords) {
     const keys = Object.keys(obj);
     for (let k of keys) {
@@ -432,12 +428,14 @@ function processRAData(data) {
         const rowNorm = {};
         for(let key in row) { rowNorm[key.trim().toLowerCase()] = row[key]; }
 
-        const kAbertura = findKeyByKeywords(rowNorm, ['data da reclamação', 'data de abertura', 'criado em', 'data criacao']);
-        const kTicket = findKeyByKeywords(rowNorm, ['número da reclamação', 'ticket', 'id', 'reclamacao']);
-        const kPedido = findKeyByKeywords(rowNorm, ['pedido', 'ordem', 'order']);
-        const kCliente = findKeyByKeywords(rowNorm, ['cliente', 'nome', 'consumidor']);
-        const kStatus = findKeyByKeywords(rowNorm, ['status', 'situação']);
-        const kNota = findKeyByKeywords(rowNorm, ['nota', 'avaliação', 'score']);
+        // Mapeamento focado exatamente nos campos que você listou
+        const kAbertura = findKeyByKeywords(rowNorm, ['data da reclamação', 'abertura', 'criado']);
+        const kRespondido = findKeyByKeywords(rowNorm, ['data que foi respondido', 'data de resposta', 'respondido', 'resolvido em']);
+        const kTicket = findKeyByKeywords(rowNorm, ['número da reclamação', 'ticket', 'reclamacao']);
+        const kPedido = findKeyByKeywords(rowNorm, ['número do pedido', 'pedido', 'ordem']);
+        const kCliente = findKeyByKeywords(rowNorm, ['nome do cliente', 'cliente', 'consumidor']);
+        const kStatus = findKeyByKeywords(rowNorm, ['status da reclamação', 'status', 'situação']);
+        const kNota = findKeyByKeywords(rowNorm, ['nota', 'avaliação']);
         const kCategoria = findKeyByKeywords(rowNorm, ['categoria', 'motivo', 'assunto']);
 
         const ticket = kTicket ? rowNorm[kTicket] : '-';
@@ -445,6 +443,7 @@ function processRAData(data) {
 
         const record = {
             abertura: kAbertura ? rowNorm[kAbertura].toString().trim() : '-',
+            respondido: kRespondido ? rowNorm[kRespondido].toString().trim() : '-',
             ticket: ticket.toString().trim(),
             pedido: kPedido ? rowNorm[kPedido].toString().trim() : '-',
             cliente: kCliente ? rowNorm[kCliente].toString().trim() : '-',
@@ -544,13 +543,17 @@ window.renderRADashboard = function() {
         options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } }
     });
 
+    // ========= CORREÇÃO DE DESEMPENHO (O FIM DO TRAVAMENTO) ========= 
+    // Em vez de mexer na tela linha por linha, montamos todo o código HTML na memória antes:
+
     const divCritical = document.getElementById('raCriticalList');
-    divCritical.innerHTML = '';
+    let criticalHtml = '';
+    
     if(criticalItems.length === 0) {
-        divCritical.innerHTML = `<p class="text-green-600 font-bold text-center mt-4">Nenhuma avaliação crítica encontrada na semana! 🎉</p>`;
+        criticalHtml = `<p class="text-green-600 font-bold text-center mt-4">Nenhuma avaliação crítica encontrada na semana! 🎉</p>`;
     } else {
         criticalItems.forEach(c => {
-            divCritical.innerHTML += `
+            criticalHtml += `
                 <div class="bg-white p-3 mb-2 rounded border border-red-100 shadow-sm">
                     <div class="flex justify-between items-center mb-1">
                         <span class="font-bold text-gray-800 text-xs">ID: ${c.ticket}</span>
@@ -562,9 +565,11 @@ window.renderRADashboard = function() {
             `;
         });
     }
+    divCritical.innerHTML = criticalHtml; // Injeta de uma só vez
 
     const tbody = document.getElementById('raTableBody');
-    tbody.innerHTML = '';
+    let tbodyHtml = ''; // Buffer de memória
+
     weekData.forEach(row => {
         let notaBadge = `<span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">-</span>`;
         if(row.nota !== '') {
@@ -574,9 +579,10 @@ window.renderRADashboard = function() {
             notaBadge = `<span class="${color} px-2 py-1 rounded text-xs font-bold">${row.nota}</span>`;
         }
 
-        tbody.innerHTML += `
+        tbodyHtml += `
             <tr class="border-b hover:bg-gray-50">
-                <td class="p-2 border">${row.abertura}</td>
+                <td class="p-2 border whitespace-nowrap text-xs">${row.abertura}</td>
+                <td class="p-2 border whitespace-nowrap text-xs text-blue-700 font-semibold">${row.respondido}</td>
                 <td class="p-2 border font-mono font-bold text-purple-700">${row.ticket}</td>
                 <td class="p-2 border text-gray-600 text-xs">${row.pedido}</td>
                 <td class="p-2 border text-gray-800 max-w-[150px] truncate" title="${row.cliente}">${row.cliente}</td>
@@ -586,4 +592,6 @@ window.renderRADashboard = function() {
             </tr>
         `;
     });
+    
+    tbody.innerHTML = tbodyHtml; // Injeta a tabela de uma vez. Isso impede o travamento do navegador!
 }

@@ -14,7 +14,7 @@
     <!-- Arquivo CSS Externo -->
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans">
+<body class="bg-gray-100 text-gray-800 font-sans flex flex-col min-h-screen">
 
     <!-- =========== TELA DE LOGIN =========== -->
     <div id="loginScreen" class="min-h-screen flex items-center justify-center bg-gray-900 absolute inset-0 z-50">
@@ -97,7 +97,6 @@
                         <p id="currentReportLabel" class="font-semibold">Relatório em exibição: Análise não salva.</p>
                     </div>
 
-                    <!-- Tabela Resumo -->
                     <div class="bg-gray-900 p-6 rounded-lg shadow-xl overflow-x-auto">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-xl font-bold text-white">Resumo de Status</h2>
@@ -114,7 +113,6 @@
                         </table>
                     </div>
 
-                    <!-- Gráficos -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="bg-white p-6 rounded-lg shadow-md border border-gray-300">
                             <h3 class="text-lg font-bold mb-4 text-center text-gray-700">Volume por Setor</h3>
@@ -126,12 +124,10 @@
                         </div>
                     </div>
 
-                    <!-- Botão Relatório Gerencial -->
                     <div class="flex">
                         <button onclick="generatePDF()" class="w-full bg-red-600 hover:bg-red-700 text-white px-6 py-4 rounded font-bold transition shadow-lg text-lg">📄 Baixar Relatório PDF (Executivo)</button>
                     </div>
 
-                    <!-- Detalhamento de Pedidos por Setor -->
                     <div id="sectorDetailsContainer" class="flex flex-col gap-6 w-full mt-2"></div>
                 </div>
             </div>
@@ -175,7 +171,7 @@
     <!-- =========== MÓDULO 2: RECLAME AQUI =========== -->
     <div id="module-ra" class="main-ui hidden max-w-6xl mx-auto p-4 md:p-6">
         
-        <!-- Cabeçalho RA (Mesma estrutura da Logística) -->
+        <!-- Cabeçalho RA -->
         <header class="bg-purple-900 text-white p-6 rounded-lg shadow-md flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
             <div class="text-center md:text-left">
                 <h1 class="text-2xl font-bold">Dashboard - Reclame Aqui</h1>
@@ -253,7 +249,8 @@
                     <table class="w-full border-collapse text-sm">
                         <thead class="sticky top-0 bg-gray-100 shadow-sm z-10">
                             <tr class="text-gray-700">
-                                <th class="p-3 border text-left font-bold">Abertura</th>
+                                <th class="p-3 border text-left font-bold whitespace-nowrap">Data Abertura</th>
+                                <th class="p-3 border text-left font-bold whitespace-nowrap">Data Resposta</th>
                                 <th class="p-3 border text-left font-bold">Ticket/ID</th>
                                 <th class="p-3 border text-left font-bold">Pedido</th>
                                 <th class="p-3 border text-left font-bold">Cliente</th>
@@ -263,7 +260,7 @@
                             </tr>
                         </thead>
                         <tbody id="raTableBody">
-                            <!-- Preenchido via JS -->
+                            <!-- Preenchido via JS de forma otimizada -->
                         </tbody>
                     </table>
                 </div>
