@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PRO Cloud - Gestão Operacional</title>
+    
+    <!-- Bibliotecas externas -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Arquivo CSS Externo -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans flex flex-col min-h-screen">
+
+    <!-- =========== TELA DE LOGIN =========== -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center bg-gray-900 absolute inset-0 z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold text-center mb-6 text-blue-900">Acesso Restrito</h2>
+            
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">E-mail</label>
+                <input type="email" id="emailInput" class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="seu@email.com">
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Senha</label>
+                <input type="password" id="passwordInput" class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••">
+            </div>
+            
+            <button onclick="fazerLogin()" id="btnLogin" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded transition">
+                Entrar
+            </button>
+            <p id="loginError" class="text-red-500 text-sm mt-4 hidden text-center font-bold">Credenciais inválidas.</p>
+        </div>
+    </div>
+
+    <!-- =========== NAVEGAÇÃO GLOBAL (MÓDULOS) =========== -->
+    <div class="main-ui hidden bg-gray-900 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-8">
+                    <span class="font-bold text-xl tracking-wider text-blue-400">PRO Cloud</span>
+                    <nav class="flex gap-4">
+                        <button onclick="switchGlobalModule('module-logistica')" id="gnav-logistica" class="px-3 py-2 rounded-md text-sm font-medium bg-gray-800 text-white transition">📦 Logística (30h+)</button>
+                        <button onclick="switchGlobalModule('module-ra')" id="gnav-ra" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition">🗣️ Reclame Aqui</button>
+                    </nav>
+                </div>
+                <div>
+                    <button onclick="fazerLogout()" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded text-sm font-bold shadow transition">Sair</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========== MÓDULO 1: LOGÍSTICA (30h+) =========== -->
+    <div id="module-logistica" class="main-ui hidden w-full max-w-7xl mx-auto p-4 md:p-6 flex-grow">
+        
+        <!-- Cabeçalho Logística -->
+        <header class="bg-blue-900 text-white p-6 rounded-t-lg shadow-md flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="text-center md:text-left">
+                <h1 class="text-2xl font-bold">Dashboard - Pedidos Parados (30h+)</h1>
+                <p class="text-sm opacity-80">Gestão Operacional na Nuvem</p>
+            </div>
+            <div class="flex flex-wrap justify-center gap-4">
+                <button onclick="saveCurrentReport()" id="btnSave" class="hidden bg-yellow-500 hover:bg-yellow-400 text-blue-900 px-4 py-2 rounded font-bold shadow transition">
+                    💾 Salvar no Firebase
+                </button>
+                <label class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded cursor-pointer transition font-semibold flex items-center justify-center shadow-lg">
+                    <span>📁 Nova Análise Logística</span>
+                    <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleFileUpload(event)">
+                </label>
+            </div>
+        </header>
+
+        <!-- Navegação Interna Logística -->
+        <div class="bg-white shadow-md rounded-b-lg mb-6 flex border-b border-gray-200">
+            <button onclick="switchTab('tab-analise')" id="nav-analise" class="tab-btn active flex-1 py-4 text-center text-gray-600 hover:text-blue-800">📊 Visão Atual</button>
+            <button onclick="switchTab('tab-historico')" id="nav-historico" class="tab-btn flex-1 py-4 text-center text-gray-600 hover:text-blue-800">🗂️ Histórico (Nuvem)</button>
+            <button onclick="switchTab('tab-conta')" id="nav-conta" class="tab-btn flex-1 py-4 text-center text-gray-600 hover:text-blue-800">👤 Minha Conta</button>
+        </div>
+
+        <!-- Conteúdo Logística -->
+        <div>
+            <!-- ABA 1: ANÁLISE -->
+            <div id="tab-analise" class="flex flex-col gap-6">
+                <div id="emptyState" class="bg-white p-12 text-center rounded-lg shadow-md text-gray-500">
+                    <span class="text-4xl mb-4 block">📈</span>
+                    <p class="text-lg">Carregue uma planilha logística ou selecione um relatório do histórico.</p>
+                </div>
+
+                <div id="uiArea" class="hidden flex-col gap-6">
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded text-blue-800 flex justify-between items-center">
+                        <p id="currentReportLabel" class="font-semibold">Relatório em exibição: Análise não salva.</p>
+                    </div>
+
+                    <div class="bg-gray-900 p-6 rounded-lg shadow-xl overflow-x-auto">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold text-white">Resumo de Status</h2>
+                            <div class="flex items-center gap-3">
+                                <span id="copyMsg" class="text-green-400 font-bold text-sm hidden transition-all">Copiado!</span>
+                                <button onclick="copyText()" class="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded shadow transition flex items-center justify-center border border-gray-600" title="Copiar Mensagem para a Equipe">📋</button>
+                            </div>
+                        </div>
+                        <table class="w-full dark-table border-collapse text-sm" id="mainTable">
+                            <thead>
+                                <tr><th>Status</th><th>Setor Responsável</th><th>QTD</th></tr>
+                            </thead>
+                            <tbody id="tableBody"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white p-6 rounded-lg shadow-md border border-gray-300">
+                            <h3 class="text-lg font-bold mb-4 text-center text-gray-700">Volume por Setor</h3>
+                            <div class="relative h-64"><canvas id="sectorChart"></canvas></div>
+                        </div>
+                        <div class="bg-white p-6 rounded-lg shadow-md border border-gray-300">
+                            <h3 class="text-lg font-bold mb-4 text-center text-gray-700">Gargalos por Status (Ativos)</h3>
+                            <div class="relative h-64"><canvas id="statusChart"></canvas></div>
+                        </div>
+                    </div>
+
+                    <div class="flex">
+                        <button onclick="generatePDF()" class="w-full bg-red-600 hover:bg-red-700 text-white px-6 py-4 rounded font-bold transition shadow-lg text-lg">📄 Baixar Relatório PDF (Executivo)</button>
+                    </div>
+
+                    <div id="sectorDetailsContainer" class="flex flex-col gap-6 w-full mt-2"></div>
+                </div>
+            </div>
+
+            <!-- ABA 2: HISTÓRICO -->
+            <div id="tab-historico" class="hidden">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex justify-between items-center mb-6 border-b pb-4">
+                        <h2 class="text-2xl font-bold text-gray-800">Relatórios Gerados</h2>
+                        <p class="text-gray-500">Armazenados de forma segura no Firebase</p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-700">
+                                    <th class="p-3 border text-left">Data do Relatório</th><th class="p-3 border text-center">Total</th><th class="p-3 border text-left">Criado por</th><th class="p-3 border text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <tr><td colspan="4" class="p-4 text-center">Carregando dados da nuvem...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABA 3: CONTA -->
+            <div id="tab-conta" class="hidden">
+                <div class="bg-white p-6 rounded-lg shadow-md max-w-lg mx-auto">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">Alterar Senha de Acesso</h2>
+                    <div class="mb-4"><label class="block text-gray-700 text-sm font-bold mb-2">Nova Senha</label><input type="password" id="newPasswordInput" class="w-full px-3 py-2 border rounded"></div>
+                    <div class="mb-6"><label class="block text-gray-700 text-sm font-bold mb-2">Confirme a Nova Senha</label><input type="password" id="confirmPasswordInput" class="w-full px-3 py-2 border rounded"></div>
+                    <button onclick="alterarSenha()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded transition shadow">Atualizar Senha</button>
+                    <p id="passwordMsg" class="text-center font-bold mt-4 hidden"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- =========== MÓDULO 2: RECLAME AQUI =========== -->
+    <div id="module-ra" class="main-ui hidden w-full max-w-7xl mx-auto p-4 md:p-6 flex-grow">
+        
+        <!-- Cabeçalho RA -->
+        <header class="bg-purple-900 text-white p-6 rounded-lg shadow-md flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+            <div class="text-center md:text-left">
+                <h1 class="text-2xl font-bold">Dashboard - Reclame Aqui</h1>
+                <p class="text-sm opacity-80">Análise de Performance Semanal</p>
+            </div>
+            <div class="flex flex-wrap justify-center gap-4">
+                <label class="bg-purple-600 hover:bg-purple-500 text-white px-6 py-2 rounded cursor-pointer transition font-semibold flex items-center justify-center shadow-lg">
+                    <span>📁 Processar Planilha RA</span>
+                    <input type="file" id="fileInputRA" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleRAFileUpload(event)">
+                </label>
+            </div>
+        </header>
+
+        <!-- Estado Vazio RA -->
+        <div id="emptyStateRA" class="bg-white p-12 text-center rounded-lg shadow-md text-gray-500">
+            <span class="text-4xl mb-4 block">🗣️</span>
+            <p class="text-lg">Carregue a planilha de histórico do Reclame Aqui para gerar os relatórios semanais.</p>
+        </div>
+
+        <!-- Área de Dados RA -->
+        <div id="uiAreaRA" class="hidden flex-col gap-6">
+            
+            <!-- Controle de Semana -->
+            <div class="bg-white p-4 rounded-lg shadow-md flex flex-col md:flex-row justify-between items-center gap-4 border-l-4 border-purple-500">
+                <div class="font-bold text-gray-700 text-lg">Selecione o período de análise:</div>
+                <select id="raWeekSelector" onchange="renderRADashboard()" class="bg-gray-50 border border-gray-300 text-gray-900 text-base rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-2.5 font-bold shadow-sm min-w-[250px]">
+                    <!-- Preenchido via JS -->
+                </select>
+            </div>
+
+            <!-- KPIs Semanais -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div class="bg-white p-4 rounded-lg shadow border-b-4 border-blue-500 text-center">
+                    <p class="text-sm text-gray-500 font-bold uppercase">Abertas</p>
+                    <p class="text-3xl font-black text-gray-800" id="raKpiAbertas">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow border-b-4 border-yellow-500 text-center">
+                    <p class="text-sm text-gray-500 font-bold uppercase">Respondidas</p>
+                    <p class="text-3xl font-black text-gray-800" id="raKpiRespondidas">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow border-b-4 border-indigo-500 text-center">
+                    <p class="text-sm text-gray-500 font-bold uppercase">Avaliadas</p>
+                    <p class="text-3xl font-black text-gray-800" id="raKpiAvaliadas">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow border-b-4 border-green-500 text-center">
+                    <p class="text-sm text-gray-500 font-bold uppercase">Resolvidas</p>
+                    <p class="text-3xl font-black text-gray-800" id="raKpiResolvidas">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow border-b-4 border-red-500 text-center">
+                    <p class="text-sm text-gray-500 font-bold uppercase">Excluídas</p>
+                    <p class="text-3xl font-black text-gray-800" id="raKpiExcluidas">0</p>
+                </div>
+            </div>
+
+            <!-- Gráfico e Alertas -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                    <h3 class="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Top Categorias Críticas (Nota 0 ou Não Resolvido)</h3>
+                    <div class="relative h-72"><canvas id="raCategoryChart"></canvas></div>
+                </div>
+                
+                <div class="bg-red-50 p-6 rounded-lg shadow-md border border-red-200 flex flex-col">
+                    <h3 class="text-lg font-bold mb-4 text-red-800 border-b border-red-200 pb-2">Atenção Crítica 🚨</h3>
+                    <p class="text-sm text-red-700 mb-4">Reclamações na semana que receberam avaliação igual a zero ou foram marcadas como não resolvidas.</p>
+                    <div class="overflow-y-auto flex-grow max-h-56" id="raCriticalList">
+                        <!-- Preenchido via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabela Detalhada RA -->
+            <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                <h3 class="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Detalhamento Semanal</h3>
+                <div class="overflow-x-auto overflow-y-auto max-h-96">
+                    <table class="w-full border-collapse text-sm">
+                        <thead class="sticky top-0 bg-gray-100 shadow-sm z-10">
+                            <tr class="text-gray-700">
+                                <th class="p-3 border text-left font-bold">Abertura</th>
+                                <th class="p-3 border text-left font-bold">Ticket/ID</th>
+                                <th class="p-3 border text-left font-bold">Pedido</th>
+                                <th class="p-3 border text-left font-bold">Cliente</th>
+                                <th class="p-3 border text-left font-bold">Status</th>
+                                <th class="p-3 border text-center font-bold">Nota</th>
+                                <th class="p-3 border text-left font-bold">Categoria</th>
+                            </tr>
+                        </thead>
+                        <tbody id="raTableBody">
+                            <!-- Preenchido via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- =========== ÁREA DO PDF (LOGÍSTICA) =========== -->
+    <div id="pdfContent">
+        <div style="text-align: center; border-bottom: 2px solid #d1d5db; padding-bottom: 20px; margin-bottom: 30px;">
+            <h1 style="font-size: 28px; font-weight: bold; color: #1f2937; margin: 0;">Relatório de Análise Operacional (30h+)</h1>
+            <p id="pdfDate" style="color: #6b7280; font-size: 14px; margin-top: 10px;"></p>
+        </div>
+        <div style="margin-bottom: 40px;">
+            <h2 style="font-size: 20px; font-weight: bold; color: #1e3a8a; border-left: 4px solid #1e3a8a; padding-left: 10px; margin-bottom: 20px;">Síntese do Cenário Operacional</h2>
+            <div id="executiveAnalysis" class="pdf-text-block" style="text-align: justify; font-size: 16px; line-height: 1.6; color: #374151;"></div>
+        </div>
+        <div>
+            <h2 style="font-size: 20px; font-weight: bold; color: #1f2937; margin-bottom: 20px;">Quadro Resumo (Ocorrências)</h2>
+            <table id="pdfTable"></table>
+        </div>
+    </div>
+
+    <!-- Arquivo JS Externo -->
+    <script type="module" src="script.js"></script>
+</body>
+</html>
