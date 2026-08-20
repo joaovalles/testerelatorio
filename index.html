@@ -14,7 +14,7 @@
     <!-- Arquivo CSS Externo -->
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans flex flex-col min-h-screen">
+<body class="bg-gray-100 text-gray-800 font-sans">
 
     <!-- =========== TELA DE LOGIN =========== -->
     <div id="loginScreen" class="min-h-screen flex items-center justify-center bg-gray-900 absolute inset-0 z-50">
@@ -39,13 +39,13 @@
     </div>
 
     <!-- =========== NAVEGAÇÃO GLOBAL (MÓDULOS) =========== -->
-    <div id="top-nav" class="hidden bg-gray-900 text-white shadow-md">
+    <div id="top-nav" class="hidden bg-gray-900 text-white shadow-md mb-6">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center gap-8">
                     <span class="font-bold text-xl tracking-wider text-blue-400">PRO Cloud</span>
                     <nav class="flex gap-4">
-                        <button onclick="switchGlobalModule('module-logistica')" id="gnav-logistica" class="px-3 py-2 rounded-md text-sm font-medium bg-gray-800 text-white transition">📦 Logística (30h+)</button>
+                        <button onclick="switchGlobalModule('module-logistica')" id="gnav-logistica" class="px-3 py-2 rounded-md text-sm font-medium bg-gray-800 text-white transition shadow">📦 Logística (30h+)</button>
                         <button onclick="switchGlobalModule('module-ra')" id="gnav-ra" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition">🗣️ Reclame Aqui</button>
                     </nav>
                 </div>
@@ -57,7 +57,7 @@
     </div>
 
     <!-- =========== MÓDULO 1: LOGÍSTICA (30h+) =========== -->
-    <div id="module-logistica" class="hidden w-full max-w-6xl mx-auto p-4 md:p-6 flex-grow">
+    <div id="module-logistica" class="main-ui hidden max-w-6xl mx-auto p-4 md:p-6">
         
         <!-- Cabeçalho Logística -->
         <header class="bg-blue-900 text-white p-6 rounded-t-lg shadow-md flex flex-col md:flex-row justify-between items-center gap-4">
@@ -70,7 +70,7 @@
                     💾 Salvar no Firebase
                 </button>
                 <label class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded cursor-pointer transition font-semibold flex items-center justify-center shadow-lg">
-                    <span>📁 Nova Análise</span>
+                    <span>📁 Nova Análise Logística</span>
                     <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleFileUpload(event)">
                 </label>
             </div>
@@ -89,7 +89,7 @@
             <div id="tab-analise" class="flex flex-col gap-6">
                 <div id="emptyState" class="bg-white p-12 text-center rounded-lg shadow-md text-gray-500">
                     <span class="text-4xl mb-4 block">📈</span>
-                    <p class="text-lg">Carregue uma planilha logística ou selecione um relatório do histórico.</p>
+                    <p class="text-lg">Carregue uma planilha logística ou selecione um relatório do histórico para visualizar os dados.</p>
                 </div>
 
                 <div id="uiArea" class="hidden flex-col gap-6">
@@ -97,6 +97,7 @@
                         <p id="currentReportLabel" class="font-semibold">Relatório em exibição: Análise não salva.</p>
                     </div>
 
+                    <!-- Tabela Resumo -->
                     <div class="bg-gray-900 p-6 rounded-lg shadow-xl overflow-x-auto">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-xl font-bold text-white">Resumo de Status</h2>
@@ -113,6 +114,7 @@
                         </table>
                     </div>
 
+                    <!-- Gráficos -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="bg-white p-6 rounded-lg shadow-md border border-gray-300">
                             <h3 class="text-lg font-bold mb-4 text-center text-gray-700">Volume por Setor</h3>
@@ -124,10 +126,12 @@
                         </div>
                     </div>
 
+                    <!-- Botão Relatório Gerencial -->
                     <div class="flex">
                         <button onclick="generatePDF()" class="w-full bg-red-600 hover:bg-red-700 text-white px-6 py-4 rounded font-bold transition shadow-lg text-lg">📄 Baixar Relatório PDF (Executivo)</button>
                     </div>
 
+                    <!-- Detalhamento de Pedidos por Setor -->
                     <div id="sectorDetailsContainer" class="flex flex-col gap-6 w-full mt-2"></div>
                 </div>
             </div>
@@ -169,17 +173,17 @@
 
 
     <!-- =========== MÓDULO 2: RECLAME AQUI =========== -->
-    <div id="module-ra" class="hidden w-full max-w-6xl mx-auto p-4 md:p-6 flex-grow">
+    <div id="module-ra" class="main-ui hidden max-w-6xl mx-auto p-4 md:p-6">
         
-        <!-- Cabeçalho RA -->
+        <!-- Cabeçalho RA (Mesma estrutura da Logística) -->
         <header class="bg-purple-900 text-white p-6 rounded-lg shadow-md flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
             <div class="text-center md:text-left">
                 <h1 class="text-2xl font-bold">Dashboard - Reclame Aqui</h1>
-                <p class="text-sm opacity-80">Análise de Performance Semanal</p>
+                <p class="text-sm opacity-80">Análise de Performance Semanal de Tickets</p>
             </div>
             <div class="flex flex-wrap justify-center gap-4">
                 <label class="bg-purple-600 hover:bg-purple-500 text-white px-6 py-2 rounded cursor-pointer transition font-semibold flex items-center justify-center shadow-lg">
-                    <span>📁 Processar Planilha RA</span>
+                    <span>📁 Analisar Planilha RA</span>
                     <input type="file" id="fileInputRA" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleRAFileUpload(event)">
                 </label>
             </div>
@@ -188,7 +192,7 @@
         <!-- Estado Vazio RA -->
         <div id="emptyStateRA" class="bg-white p-12 text-center rounded-lg shadow-md text-gray-500">
             <span class="text-4xl mb-4 block">🗣️</span>
-            <p class="text-lg">Carregue a planilha de histórico do Reclame Aqui para gerar os relatórios semanais.</p>
+            <p class="text-lg">Carregue a planilha de histórico do Reclame Aqui para visualizar os relatórios semanais.</p>
         </div>
 
         <!-- Área de Dados RA -->
@@ -229,13 +233,13 @@
             <!-- Gráfico e Alertas -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md border border-gray-200">
-                    <h3 class="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Top Categorias Críticas (Nota 0 ou Não Resolvido)</h3>
+                    <h3 class="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Volume de Críticas por Categoria (Nota 0 / Não Resolvido)</h3>
                     <div class="relative h-72"><canvas id="raCategoryChart"></canvas></div>
                 </div>
                 
                 <div class="bg-red-50 p-6 rounded-lg shadow-md border border-red-200 flex flex-col">
                     <h3 class="text-lg font-bold mb-4 text-red-800 border-b border-red-200 pb-2">Atenção Crítica 🚨</h3>
-                    <p class="text-sm text-red-700 mb-4">Reclamações na semana que receberam avaliação igual a zero ou foram marcadas como não resolvidas.</p>
+                    <p class="text-sm text-red-700 mb-4">Reclamações da semana que receberam nota zero ou foram categorizadas como não resolvidas.</p>
                     <div class="overflow-y-auto flex-grow max-h-56" id="raCriticalList">
                         <!-- Preenchido via JS -->
                     </div>
@@ -244,7 +248,7 @@
 
             <!-- Tabela Detalhada RA -->
             <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-                <h3 class="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Detalhamento Semanal</h3>
+                <h3 class="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Detalhamento Semanal (Todos os Casos)</h3>
                 <div class="overflow-x-auto overflow-y-auto max-h-96">
                     <table class="w-full border-collapse text-sm">
                         <thead class="sticky top-0 bg-gray-100 shadow-sm z-10">

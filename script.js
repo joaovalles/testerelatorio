@@ -19,7 +19,6 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const reportsCollection = collection(db, 'relatorios');
 
-// ================= ESTADOS GLOBAIS =================
 let currentModule = 'module-logistica';
 
 // ================= SISTEMA DE LOGIN E CONTA =================
@@ -27,7 +26,8 @@ onAuthStateChanged(auth, (user) => {
     if (user) {
         document.getElementById('loginScreen').classList.add('hidden');
         document.getElementById('top-nav').classList.remove('hidden');
-        switchGlobalModule('module-logistica'); 
+        // Ao logar, exibe o módulo Logística de forma segura
+        switchGlobalModule('module-logistica');
     } else {
         document.getElementById('loginScreen').classList.remove('hidden');
         document.getElementById('top-nav').classList.add('hidden');
@@ -84,6 +84,7 @@ window.alterarSenha = async function() {
 }
 
 // ================= CONTROLE NAVEGAÇÃO GLOBAL =================
+// DEBUG: Função ajustada para não quebrar o CSS de layout em bloco da página
 window.switchGlobalModule = function(moduleId) {
     currentModule = moduleId;
     
@@ -91,22 +92,23 @@ window.switchGlobalModule = function(moduleId) {
     document.getElementById('module-logistica').classList.add('hidden');
     document.getElementById('module-ra').classList.add('hidden');
     
-    // Reseta visual dos botões globais
+    // Reseta visual dos botões
     const btnLog = document.getElementById('gnav-logistica');
     const btnRa = document.getElementById('gnav-ra');
     
     btnLog.className = "px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition";
     btnRa.className = "px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition";
 
-    // Mostra módulo ativo (remover a classe hidden é o suficiente, não precisamos do flex na raiz)
+    // Mostra o módulo atual e seleciona o botão (Apenas remove hidden, mantendo o block display nativo)
     document.getElementById(moduleId).classList.remove('hidden');
     
     if(moduleId === 'module-logistica') {
-        btnLog.className = "px-3 py-2 rounded-md text-sm font-medium bg-gray-800 text-white transition";
+        btnLog.className = "px-3 py-2 rounded-md text-sm font-medium bg-gray-800 text-white transition shadow";
     } else {
-        btnRa.className = "px-3 py-2 rounded-md text-sm font-medium bg-gray-800 text-white transition";
+        btnRa.className = "px-3 py-2 rounded-md text-sm font-medium bg-gray-800 text-white transition shadow";
     }
 }
+
 
 // =============================================================
 // ================= MÓDULO 1: LOGÍSTICA (30h+) ================
@@ -209,7 +211,7 @@ function processNewData(data) {
 function updateDashboard() {
     document.getElementById('emptyState').classList.add('hidden');
     document.getElementById('uiArea').classList.remove('hidden');
-    document.getElementById('uiArea').classList.add('flex'); // Aqui mantemos o flex pois o uiArea foi feito para empilhar itens
+    document.getElementById('uiArea').classList.add('flex'); // uiArea requer flex-col interno
     renderTable();
     generateTextForTeam(); 
     renderCharts();
@@ -373,17 +375,16 @@ window.generatePDF = function() {
 // =============================================================
 
 let raDataRaw = [];
-let raDataGrouped = {}; // { "Semana 34 - 2026": [ array de tickets ] }
+let raDataGrouped = {}; 
 let raChartInstance = null;
 
-// Helper para descobrir semana do ano a partir de uma data string (dd/mm/yyyy)
 function parseDateBRAndGetWeek(dateStr) {
     if(!dateStr || dateStr === '-' || dateStr === '') return "Data Desconhecida";
     try {
-        const parts = dateStr.toString().split(' ')[0].split(/[\/\-]/); // aceita 15/08/2026 ou 2026-08-15
+        const parts = dateStr.toString().split(' ')[0].split(/[\/\-]/); 
         let dateObj;
-        if(parts[0].length === 4) { dateObj = new Date(parts[0], parts[1]-1, parts[2]); } // yyyy-mm-dd
-        else { dateObj = new Date(parts[2], parts[1]-1, parts[0]); } // dd/mm/yyyy
+        if(parts[0].length === 4) { dateObj = new Date(parts[0], parts[1]-1, parts[2]); } 
+        else { dateObj = new Date(parts[2], parts[1]-1, parts[0]); } 
         
         if(isNaN(dateObj.getTime())) return "Data Desconhecida";
 
@@ -396,7 +397,6 @@ function parseDateBRAndGetWeek(dateStr) {
     }
 }
 
-// Funções de busca robusta por nome de coluna
 function findKeyByKeywords(obj, keywords) {
     const keys = Object.keys(obj);
     for (let k of keys) {
@@ -417,7 +417,6 @@ window.handleRAFileUpload = function(event) {
         const workbook = XLSX.read(data, {type: 'array'});
         const sheetName = workbook.SheetNames[0];
         
-        // raw: false para garantir datas em texto
         const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "", raw: false });
         processRAData(jsonData);
     };
@@ -464,8 +463,6 @@ function processRAData(data) {
     populateRAWeekSelector();
     
     document.getElementById('emptyStateRA').classList.add('hidden');
-    
-    // Aqui também mantemos o flex porque a view de RA precisa empilhar
     document.getElementById('uiAreaRA').classList.remove('hidden');
     document.getElementById('uiAreaRA').classList.add('flex');
 }
