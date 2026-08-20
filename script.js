@@ -26,11 +26,13 @@ let currentModule = 'module-logistica';
 onAuthStateChanged(auth, (user) => {
     if (user) {
         document.getElementById('loginScreen').classList.add('hidden');
-        document.querySelectorAll('.main-ui').forEach(el => el.classList.remove('hidden'));
-        switchGlobalModule('module-logistica'); // Padrão ao logar
+        document.getElementById('top-nav').classList.remove('hidden');
+        switchGlobalModule('module-logistica'); 
     } else {
         document.getElementById('loginScreen').classList.remove('hidden');
-        document.querySelectorAll('.main-ui').forEach(el => el.classList.add('hidden'));
+        document.getElementById('top-nav').classList.add('hidden');
+        document.getElementById('module-logistica').classList.add('hidden');
+        document.getElementById('module-ra').classList.add('hidden');
     }
 });
 
@@ -96,9 +98,8 @@ window.switchGlobalModule = function(moduleId) {
     btnLog.className = "px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition";
     btnRa.className = "px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition";
 
-    // Mostra módulo ativo
+    // Mostra módulo ativo (remover a classe hidden é o suficiente, não precisamos do flex na raiz)
     document.getElementById(moduleId).classList.remove('hidden');
-    document.getElementById(moduleId).classList.add('flex');
     
     if(moduleId === 'module-logistica') {
         btnLog.className = "px-3 py-2 rounded-md text-sm font-medium bg-gray-800 text-white transition";
@@ -208,7 +209,7 @@ function processNewData(data) {
 function updateDashboard() {
     document.getElementById('emptyState').classList.add('hidden');
     document.getElementById('uiArea').classList.remove('hidden');
-    document.getElementById('uiArea').classList.add('flex');
+    document.getElementById('uiArea').classList.add('flex'); // Aqui mantemos o flex pois o uiArea foi feito para empilhar itens
     renderTable();
     generateTextForTeam(); 
     renderCharts();
@@ -429,11 +430,9 @@ function processRAData(data) {
     raDataGrouped = {};
 
     data.forEach(row => {
-        // Normaliza chaves da planilha para minúsculo
         const rowNorm = {};
         for(let key in row) { rowNorm[key.trim().toLowerCase()] = row[key]; }
 
-        // Mapeamento dinâmico de colunas RA
         const kAbertura = findKeyByKeywords(rowNorm, ['data da reclamação', 'data de abertura', 'criado em', 'data criacao']);
         const kTicket = findKeyByKeywords(rowNorm, ['número da reclamação', 'ticket', 'id', 'reclamacao']);
         const kPedido = findKeyByKeywords(rowNorm, ['pedido', 'ordem', 'order']);
@@ -443,7 +442,7 @@ function processRAData(data) {
         const kCategoria = findKeyByKeywords(rowNorm, ['categoria', 'motivo', 'assunto']);
 
         const ticket = kTicket ? rowNorm[kTicket] : '-';
-        if(ticket === '-' || ticket === '') return; // Pula linha vazia
+        if(ticket === '-' || ticket === '') return; 
 
         const record = {
             abertura: kAbertura ? rowNorm[kAbertura].toString().trim() : '-',
@@ -465,6 +464,8 @@ function processRAData(data) {
     populateRAWeekSelector();
     
     document.getElementById('emptyStateRA').classList.add('hidden');
+    
+    // Aqui também mantemos o flex porque a view de RA precisa empilhar
     document.getElementById('uiAreaRA').classList.remove('hidden');
     document.getElementById('uiAreaRA').classList.add('flex');
 }
@@ -473,7 +474,6 @@ function populateRAWeekSelector() {
     const selector = document.getElementById('raWeekSelector');
     selector.innerHTML = '';
     
-    // Ordena as semanas em ordem alfabética reversa (mais recente primeiro)
     const weeks = Object.keys(raDataGrouped).sort((a, b) => b.localeCompare(a));
     
     weeks.forEach(w => {
@@ -497,7 +497,6 @@ window.renderRADashboard = function() {
     
     const weekData = raDataGrouped[selectedWeek];
     
-    // Contadores Iniciais
     let cAbertas = weekData.length;
     let cRespondidas = 0;
     let cAvaliadas = 0;
@@ -505,18 +504,16 @@ window.renderRADashboard = function() {
     let cExcluidas = 0;
     
     let categoriasNotaZero = {};
-    let criticalItems = []; // Itens com nota 0 ou Nao Resolvido
+    let criticalItems = []; 
 
     weekData.forEach(item => {
         const st = item.status.toLowerCase();
         
-        // Regras de negócio de Status (Ajuste conforme os exatos nomes da sua plataforma)
         if(st.includes('respondida')) cRespondidas++;
         if(st.includes('avaliada') || item.nota !== '') cAvaliadas++;
         if(st.includes('resolvida')) cResolvidas++;
         if(st.includes('excluída') || st.includes('desativada')) cExcluidas++;
 
-        // Regra da Nota ZERO ou Status de Não Resolvido
         if(item.nota === '0' || st.includes('não resolvida')) {
             const cat = item.categoria;
             categoriasNotaZero[cat] = (categoriasNotaZero[cat] || 0) + 1;
@@ -524,14 +521,12 @@ window.renderRADashboard = function() {
         }
     });
 
-    // Atualiza KPIs
     document.getElementById('raKpiAbertas').innerText = cAbertas;
     document.getElementById('raKpiRespondidas').innerText = cRespondidas;
     document.getElementById('raKpiAvaliadas').innerText = cAvaliadas;
     document.getElementById('raKpiResolvidas').innerText = cResolvidas;
     document.getElementById('raKpiExcluidas').innerText = cExcluidas;
 
-    // Atualiza Gráfico
     if(raChartInstance) raChartInstance.destroy();
     
     const catLabels = Object.keys(categoriasNotaZero);
@@ -545,14 +540,13 @@ window.renderRADashboard = function() {
             datasets: [{
                 label: 'Qtd Detratores',
                 data: catData.length > 0 ? catData : [0],
-                backgroundColor: '#ef4444', // red-500
+                backgroundColor: '#ef4444', 
                 borderRadius: 4
             }]
         },
         options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } }
     });
 
-    // Atualiza Lista Crítica Lateral
     const divCritical = document.getElementById('raCriticalList');
     divCritical.innerHTML = '';
     if(criticalItems.length === 0) {
@@ -572,15 +566,14 @@ window.renderRADashboard = function() {
         });
     }
 
-    // Atualiza Tabela Base
     const tbody = document.getElementById('raTableBody');
     tbody.innerHTML = '';
     weekData.forEach(row => {
         let notaBadge = `<span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">-</span>`;
         if(row.nota !== '') {
-            let color = 'bg-yellow-200 text-yellow-800'; // Mediano
-            if(parseInt(row.nota) >= 7) color = 'bg-green-200 text-green-800'; // Bom
-            if(parseInt(row.nota) <= 3) color = 'bg-red-200 text-red-800'; // Ruim
+            let color = 'bg-yellow-200 text-yellow-800'; 
+            if(parseInt(row.nota) >= 7) color = 'bg-green-200 text-green-800'; 
+            if(parseInt(row.nota) <= 3) color = 'bg-red-200 text-red-800'; 
             notaBadge = `<span class="${color} px-2 py-1 rounded text-xs font-bold">${row.nota}</span>`;
         }
 
