@@ -167,7 +167,7 @@ window.handleFileUpload = function(event) {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, {type: 'array'});
         const sheetName = workbook.SheetNames[0];
-        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "", raw: false });
+        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "", raw: false, dateNF: 'dd/mm/yyyy' });
         processNewData(jsonData);
     };
     reader.readAsArrayBuffer(file);
@@ -374,12 +374,20 @@ let raDataGrouped = {};
 let raChartInstance = null;
 
 function parseDateBRAndGetWeek(dateStr) {
-    if(!dateStr || dateStr === '-' || dateStr === '') return "Data Desconhecida";
+    if(!dateStr || dateStr === '-' || dateStr === '' || dateStr.toString().toUpperCase() === 'NÃO INFORMADO') return "Data Desconhecida";
     try {
-        const parts = dateStr.toString().split(' ')[0].split(/[\/\-]/); 
+        // Ignora as horas que o Reclame Aqui joga na exportação
+        const datePart = dateStr.toString().split(' ')[0];
+        const parts = datePart.split(/[\/\-]/); 
+        
         let dateObj;
-        if(parts[0].length === 4) { dateObj = new Date(parts[0], parts[1]-1, parts[2]); } 
-        else { dateObj = new Date(parts[2], parts[1]-1, parts[0]); } 
+        if(parts[0].length === 4) { 
+            dateObj = new Date(parts[0], parts[1]-1, parts[2]); 
+        } else if (parts.length === 3) { 
+            dateObj = new Date(parts[2], parts[1]-1, parts[0]); 
+        } else {
+            return "Data Desconhecida";
+        }
         
         if(isNaN(dateObj.getTime())) return "Data Desconhecida";
 
@@ -392,9 +400,12 @@ function parseDateBRAndGetWeek(dateStr) {
     }
 }
 
-// Função de busca pelas colunas melhorada
+// Mecanismo de busca de colunas turbinado com as nomenclaturas exatas do seu arquivo
 function findKeyByKeywords(obj, keywords) {
     const keys = Object.keys(obj);
+    for (let k of keys) {
+        if (keywords.includes(k)) return k;
+    }
     for (let k of keys) {
         for (let kw of keywords) {
             if (k.includes(kw)) return k;
@@ -413,7 +424,8 @@ window.handleRAFileUpload = function(event) {
         const workbook = XLSX.read(data, {type: 'array'});
         const sheetName = workbook.SheetNames[0];
         
-        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "", raw: false });
+        // dateNF força o formato brasileiro padrão se a coluna vier como formato serial numérico do Excel
+        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "", raw: false, dateNF: 'dd/mm/yyyy' });
         processRAData(jsonData);
     };
     reader.readAsArrayBuffer(file);
@@ -428,27 +440,44 @@ function processRAData(data) {
         const rowNorm = {};
         for(let key in row) { rowNorm[key.trim().toLowerCase()] = row[key]; }
 
-        // Mapeamento focado exatamente nos campos que você listou
-        const kAbertura = findKeyByKeywords(rowNorm, ['data da reclamação', 'abertura', 'criado']);
-        const kRespondido = findKeyByKeywords(rowNorm, ['data que foi respondido', 'data de resposta', 'respondido', 'resolvido em']);
-        const kTicket = findKeyByKeywords(rowNorm, ['número da reclamação', 'ticket', 'reclamacao']);
-        const kPedido = findKeyByKeywords(rowNorm, ['número do pedido', 'pedido', 'ordem']);
-        const kCliente = findKeyByKeywords(rowNorm, ['nome do cliente', 'cliente', 'consumidor']);
-        const kStatus = findKeyByKeywords(rowNorm, ['status da reclamação', 'status', 'situação']);
+        // Mapeamento focado exatamente nos campos detectados pelo script no seu arquivo "teste RA.xlsx"
+        const kAbertura = findKeyByKeywords(rowNorm, ['entrada', 'data de abertura', 'criado']);
+        const kRespondido = findKeyByKeywords(rowNorm, ['data da resposta', 'respondida em']);
+        const kTicket = findKeyByKeywords(rowNorm, ['ticket']);
+        const kID = findKeyByKeywords(rowNorm, ['id']);
+        const kPedido = findKeyByKeywords(rowNorm, ['pedido', 'número do pedido']);
+        const kCliente = findKeyByKeywords(rowNorm, ['cliente', 'nome do consumidor']);
+        const kStatus = findKeyByKeywords(rowNorm, ['situação', 'status']);
         const kNota = findKeyByKeywords(rowNorm, ['nota', 'avaliação']);
         const kCategoria = findKeyByKeywords(rowNorm, ['categoria', 'motivo', 'assunto']);
 
-        const ticket = kTicket ? rowNorm[kTicket] : '-';
-        if(ticket === '-' || ticket === '') return; 
+        // Extrai o ID e o Ticket e junta na mesma célula se os dois existirem
+        const idVal = kID ? rowNorm[kID].toString().trim() : '';
+        const ticketVal = kTicket ? rowNorm[kTicket].toString().trim() : '';
+        
+        let idTicketFinal = '-';
+        if (idVal && idVal !== '-' && idVal.toUpperCase() !== 'NÃO INFORMADO') idTicketFinal = idVal;
+        
+        if (ticketVal && ticketVal !== '-' && ticketVal.toUpperCase() !== 'NÃO INFORMADO') {
+            idTicketFinal = idTicketFinal !== '-' ? `${idTicketFinal} / ${ticketVal}` : ticketVal;
+        }
+        
+        if (idTicketFinal === '-') idTicketFinal = 'NÃO INFORMADO';
+
+        // Filtro de nota (se estiver 'NÃO INFORMADO' ou nulo)
+        let notaVal = kNota ? rowNorm[kNota].toString().trim().toUpperCase() : '';
+        if (notaVal === 'NÃO INFORMADO' || notaVal === 'NAN' || notaVal === '-' || notaVal === '') {
+            notaVal = '';
+        }
 
         const record = {
             abertura: kAbertura ? rowNorm[kAbertura].toString().trim() : '-',
             respondido: kRespondido ? rowNorm[kRespondido].toString().trim() : '-',
-            ticket: ticket.toString().trim(),
+            ticketId: idTicketFinal,
             pedido: kPedido ? rowNorm[kPedido].toString().trim() : '-',
             cliente: kCliente ? rowNorm[kCliente].toString().trim() : '-',
             status: kStatus ? rowNorm[kStatus].toString().trim() : 'Sem Status',
-            nota: kNota ? rowNorm[kNota].toString().trim() : '',
+            nota: notaVal,
             categoria: kCategoria ? rowNorm[kCategoria].toString().trim() : 'Não categorizado'
         };
 
@@ -502,15 +531,16 @@ window.renderRADashboard = function() {
     let categoriasNotaZero = {};
     let criticalItems = []; 
 
+    // O status no seu arquivo real da coluna SITUAÇÃO
     weekData.forEach(item => {
         const st = item.status.toLowerCase();
         
-        if(st.includes('respondida')) cRespondidas++;
-        if(st.includes('avaliada') || item.nota !== '') cAvaliadas++;
-        if(st.includes('resolvida')) cResolvidas++;
-        if(st.includes('excluída') || st.includes('desativada')) cExcluidas++;
+        if(st.includes('respondid')) cRespondidas++;
+        if(item.nota !== '') cAvaliadas++;
+        if(st.includes('resolvid')) cResolvidas++;
+        if(st.includes('excluíd') || st.includes('desativada')) cExcluidas++;
 
-        if(item.nota === '0' || st.includes('não resolvida')) {
+        if(item.nota === '0' || st.includes('não resolvid')) {
             const cat = item.categoria;
             categoriasNotaZero[cat] = (categoriasNotaZero[cat] || 0) + 1;
             criticalItems.push(item);
@@ -543,9 +573,6 @@ window.renderRADashboard = function() {
         options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } }
     });
 
-    // ========= CORREÇÃO DE DESEMPENHO (O FIM DO TRAVAMENTO) ========= 
-    // Em vez de mexer na tela linha por linha, montamos todo o código HTML na memória antes:
-
     const divCritical = document.getElementById('raCriticalList');
     let criticalHtml = '';
     
@@ -556,7 +583,7 @@ window.renderRADashboard = function() {
             criticalHtml += `
                 <div class="bg-white p-3 mb-2 rounded border border-red-100 shadow-sm">
                     <div class="flex justify-between items-center mb-1">
-                        <span class="font-bold text-gray-800 text-xs">ID: ${c.ticket}</span>
+                        <span class="font-bold text-gray-800 text-xs">ID/Tk: ${c.ticketId}</span>
                         <span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded">Nota: ${c.nota || 'S/N'}</span>
                     </div>
                     <p class="text-xs text-gray-600 truncate">${c.cliente}</p>
@@ -565,13 +592,13 @@ window.renderRADashboard = function() {
             `;
         });
     }
-    divCritical.innerHTML = criticalHtml; // Injeta de uma só vez
+    divCritical.innerHTML = criticalHtml;
 
     const tbody = document.getElementById('raTableBody');
-    let tbodyHtml = ''; // Buffer de memória
+    let tbodyHtml = ''; 
 
     weekData.forEach(row => {
-        let notaBadge = `<span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">-</span>`;
+        let notaBadge = `<span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">N/I</span>`;
         if(row.nota !== '') {
             let color = 'bg-yellow-200 text-yellow-800'; 
             if(parseInt(row.nota) >= 7) color = 'bg-green-200 text-green-800'; 
@@ -579,11 +606,15 @@ window.renderRADashboard = function() {
             notaBadge = `<span class="${color} px-2 py-1 rounded text-xs font-bold">${row.nota}</span>`;
         }
 
+        // Limpeza de horas para exibição visual limpa
+        let dateAberturaExibicao = row.abertura !== '-' ? row.abertura.toString().split(' ')[0] : '-';
+        let dateRespostaExibicao = row.respondido !== '-' ? row.respondido.toString().split(' ')[0] : '-';
+
         tbodyHtml += `
             <tr class="border-b hover:bg-gray-50">
-                <td class="p-2 border whitespace-nowrap text-xs">${row.abertura}</td>
-                <td class="p-2 border whitespace-nowrap text-xs text-blue-700 font-semibold">${row.respondido}</td>
-                <td class="p-2 border font-mono font-bold text-purple-700">${row.ticket}</td>
+                <td class="p-2 border whitespace-nowrap text-xs">${dateAberturaExibicao}</td>
+                <td class="p-2 border whitespace-nowrap text-xs text-blue-700 font-semibold">${dateRespostaExibicao}</td>
+                <td class="p-2 border font-mono font-bold text-purple-700">${row.ticketId}</td>
                 <td class="p-2 border text-gray-600 text-xs">${row.pedido}</td>
                 <td class="p-2 border text-gray-800 max-w-[150px] truncate" title="${row.cliente}">${row.cliente}</td>
                 <td class="p-2 border text-xs font-semibold text-gray-600 uppercase">${row.status}</td>
@@ -593,5 +624,5 @@ window.renderRADashboard = function() {
         `;
     });
     
-    tbody.innerHTML = tbodyHtml; // Injeta a tabela de uma vez. Isso impede o travamento do navegador!
+    tbody.innerHTML = tbodyHtml; 
 }
