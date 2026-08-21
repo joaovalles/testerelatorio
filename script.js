@@ -369,10 +369,9 @@ window.generatePDF = function() {
 // ================= MÓDULO 2: RECLAME AQUI ====================
 // =============================================================
 
-let raDataAll = []; // Armazena todos os dados filtráveis
+let raDataAll = []; 
 let raChartInstance = null;
 
-// Função que converte a string de data em um Objeto Date real para comparação nos filtros
 function parseRADateObj(dateStr) {
     if(!dateStr || dateStr === '-' || dateStr === '' || dateStr.toString().toUpperCase() === 'NÃO INFORMADO') return null;
     try {
@@ -462,7 +461,7 @@ function processRAData(data) {
 
         const record = {
             abertura: aberturaStr,
-            dataAberturaObj: parseRADateObj(aberturaStr), // Objeto real guardado para o filtro
+            dataAberturaObj: parseRADateObj(aberturaStr), 
             respondido: kRespondido ? rowNorm[kRespondido].toString().trim() : '-',
             ticketId: idTicketFinal,
             pedido: kPedido ? rowNorm[kPedido].toString().trim() : '-',
@@ -475,13 +474,11 @@ function processRAData(data) {
         raDataAll.push(record);
     });
 
-    // Encontrar data mínima e máxima para preencher os inputs automaticamente
     let validDates = raDataAll.map(r => r.dataAberturaObj).filter(d => d !== null);
     if (validDates.length > 0) {
         let minDate = new Date(Math.min(...validDates));
         let maxDate = new Date(Math.max(...validDates));
         
-        // Seta as datas iniciais e finais no campo do HTML
         document.getElementById('raStartDate').value = minDate.toISOString().split('T')[0];
         document.getElementById('raEndDate').value = maxDate.toISOString().split('T')[0];
     }
@@ -490,10 +487,10 @@ function processRAData(data) {
     document.getElementById('uiAreaRA').classList.remove('hidden');
     document.getElementById('uiAreaRA').classList.add('flex');
 
-    window.filterRADashboard(); // Executa o filtro com as datas preenchidas
+    // BUG RESOLVIDO: O comando fantasma "populateRAWeekSelector()" foi totalmente removido daqui.
+    window.filterRADashboard(); 
 }
 
-// Filtra os dados com base nos inputs manuais de data
 window.filterRADashboard = function() {
     const startVal = document.getElementById('raStartDate').value;
     const endVal = document.getElementById('raEndDate').value;
@@ -513,7 +510,6 @@ window.filterRADashboard = function() {
     renderRADashboard(filteredData);
 }
 
-// Renderiza a interface recebendo apenas os dados já filtrados
 function renderRADashboard(periodData) {
     let cAbertas = periodData.length;
     let cRespondidas = 0;
