@@ -369,38 +369,32 @@ window.generatePDF = function() {
 // ================= MÓDULO 2: RECLAME AQUI ====================
 // =============================================================
 
-let raDataRaw = [];
-let raDataGrouped = {}; 
+let raDataAll = []; // Armazena todos os dados filtráveis
 let raChartInstance = null;
 
-function parseDateBRAndGetWeek(dateStr) {
-    if(!dateStr || dateStr === '-' || dateStr === '' || dateStr.toString().toUpperCase() === 'NÃO INFORMADO') return "Data Desconhecida";
+// Função que converte a string de data em um Objeto Date real para comparação nos filtros
+function parseRADateObj(dateStr) {
+    if(!dateStr || dateStr === '-' || dateStr === '' || dateStr.toString().toUpperCase() === 'NÃO INFORMADO') return null;
     try {
-        // Ignora as horas que o Reclame Aqui joga na exportação
         const datePart = dateStr.toString().split(' ')[0];
         const parts = datePart.split(/[\/\-]/); 
         
         let dateObj;
         if(parts[0].length === 4) { 
-            dateObj = new Date(parts[0], parts[1]-1, parts[2]); 
+            dateObj = new Date(parts[0], parseInt(parts[1])-1, parts[2]); 
         } else if (parts.length === 3) { 
-            dateObj = new Date(parts[2], parts[1]-1, parts[0]); 
+            dateObj = new Date(parts[2], parseInt(parts[1])-1, parts[0]); 
         } else {
-            return "Data Desconhecida";
+            return null;
         }
         
-        if(isNaN(dateObj.getTime())) return "Data Desconhecida";
-
-        const firstDayOfYear = new Date(dateObj.getFullYear(), 0, 1);
-        const pastDaysOfYear = (dateObj - firstDayOfYear) / 86400000;
-        const weekNum = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
-        return `Semana ${weekNum.toString().padStart(2, '0')} - ${dateObj.getFullYear()}`;
+        if(isNaN(dateObj.getTime())) return null;
+        return dateObj;
     } catch(e) {
-        return "Data Desconhecida";
+        return null;
     }
 }
 
-// Mecanismo de busca de colunas turbinado com as nomenclaturas exatas do seu arquivo
 function findKeyByKeywords(obj, keywords) {
     const keys = Object.keys(obj);
     for (let k of keys) {
@@ -423,8 +417,6 @@ window.handleRAFileUpload = function(event) {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, {type: 'array'});
         const sheetName = workbook.SheetNames[0];
-        
-        // dateNF força o formato brasileiro padrão se a coluna vier como formato serial numérico do Excel
         const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "", raw: false, dateNF: 'dd/mm/yyyy' });
         processRAData(jsonData);
     };
@@ -433,14 +425,12 @@ window.handleRAFileUpload = function(event) {
 }
 
 function processRAData(data) {
-    raDataRaw = [];
-    raDataGrouped = {};
+    raDataAll = [];
 
     data.forEach(row => {
         const rowNorm = {};
         for(let key in row) { rowNorm[key.trim().toLowerCase()] = row[key]; }
 
-        // Mapeamento focado exatamente nos campos detectados pelo script no seu arquivo "teste RA.xlsx"
         const kAbertura = findKeyByKeywords(rowNorm, ['entrada', 'data de abertura', 'criado']);
         const kRespondido = findKeyByKeywords(rowNorm, ['data da resposta', 'respondida em']);
         const kTicket = findKeyByKeywords(rowNorm, ['ticket']);
@@ -451,7 +441,6 @@ function processRAData(data) {
         const kNota = findKeyByKeywords(rowNorm, ['nota', 'avaliação']);
         const kCategoria = findKeyByKeywords(rowNorm, ['categoria', 'motivo', 'assunto']);
 
-        // Extrai o ID e o Ticket e junta na mesma célula se os dois existirem
         const idVal = kID ? rowNorm[kID].toString().trim() : '';
         const ticketVal = kTicket ? rowNorm[kTicket].toString().trim() : '';
         
@@ -464,14 +453,16 @@ function processRAData(data) {
         
         if (idTicketFinal === '-') idTicketFinal = 'NÃO INFORMADO';
 
-        // Filtro de nota (se estiver 'NÃO INFORMADO' ou nulo)
         let notaVal = kNota ? rowNorm[kNota].toString().trim().toUpperCase() : '';
         if (notaVal === 'NÃO INFORMADO' || notaVal === 'NAN' || notaVal === '-' || notaVal === '') {
             notaVal = '';
         }
 
+        const aberturaStr = kAbertura ? rowNorm[kAbertura].toString().trim() : '-';
+
         const record = {
-            abertura: kAbertura ? rowNorm[kAbertura].toString().trim() : '-',
+            abertura: aberturaStr,
+            dataAberturaObj: parseRADateObj(aberturaStr), // Objeto real guardado para o filtro
             respondido: kRespondido ? rowNorm[kRespondido].toString().trim() : '-',
             ticketId: idTicketFinal,
             pedido: kPedido ? rowNorm[kPedido].toString().trim() : '-',
@@ -481,48 +472,50 @@ function processRAData(data) {
             categoria: kCategoria ? rowNorm[kCategoria].toString().trim() : 'Não categorizado'
         };
 
-        const weekLabel = parseDateBRAndGetWeek(record.abertura);
-        
-        if(!raDataGrouped[weekLabel]) raDataGrouped[weekLabel] = [];
-        raDataGrouped[weekLabel].push(record);
-        raDataRaw.push(record);
+        raDataAll.push(record);
     });
 
-    populateRAWeekSelector();
+    // Encontrar data mínima e máxima para preencher os inputs automaticamente
+    let validDates = raDataAll.map(r => r.dataAberturaObj).filter(d => d !== null);
+    if (validDates.length > 0) {
+        let minDate = new Date(Math.min(...validDates));
+        let maxDate = new Date(Math.max(...validDates));
+        
+        // Seta as datas iniciais e finais no campo do HTML
+        document.getElementById('raStartDate').value = minDate.toISOString().split('T')[0];
+        document.getElementById('raEndDate').value = maxDate.toISOString().split('T')[0];
+    }
     
     document.getElementById('emptyStateRA').classList.add('hidden');
     document.getElementById('uiAreaRA').classList.remove('hidden');
     document.getElementById('uiAreaRA').classList.add('flex');
+
+    window.filterRADashboard(); // Executa o filtro com as datas preenchidas
 }
 
-function populateRAWeekSelector() {
-    const selector = document.getElementById('raWeekSelector');
-    selector.innerHTML = '';
-    
-    const weeks = Object.keys(raDataGrouped).sort((a, b) => b.localeCompare(a));
-    
-    weeks.forEach(w => {
-        const opt = document.createElement('option');
-        opt.value = w;
-        opt.innerText = w;
-        selector.appendChild(opt);
-    });
+// Filtra os dados com base nos inputs manuais de data
+window.filterRADashboard = function() {
+    const startVal = document.getElementById('raStartDate').value;
+    const endVal = document.getElementById('raEndDate').value;
 
-    if(weeks.length > 0) {
-        selector.value = weeks[0];
-        window.renderRADashboard();
+    let filteredData = raDataAll;
+
+    if (startVal) {
+        const startDate = new Date(startVal + 'T00:00:00');
+        filteredData = filteredData.filter(r => r.dataAberturaObj && r.dataAberturaObj >= startDate);
     }
+    
+    if (endVal) {
+        const endDate = new Date(endVal + 'T23:59:59');
+        filteredData = filteredData.filter(r => r.dataAberturaObj && r.dataAberturaObj <= endDate);
+    }
+
+    renderRADashboard(filteredData);
 }
 
-window.renderRADashboard = function() {
-    const selector = document.getElementById('raWeekSelector');
-    const selectedWeek = selector.value;
-    
-    if(!selectedWeek || !raDataGrouped[selectedWeek]) return;
-    
-    const weekData = raDataGrouped[selectedWeek];
-    
-    let cAbertas = weekData.length;
+// Renderiza a interface recebendo apenas os dados já filtrados
+function renderRADashboard(periodData) {
+    let cAbertas = periodData.length;
     let cRespondidas = 0;
     let cAvaliadas = 0;
     let cResolvidas = 0;
@@ -531,8 +524,7 @@ window.renderRADashboard = function() {
     let categoriasNotaZero = {};
     let criticalItems = []; 
 
-    // O status no seu arquivo real da coluna SITUAÇÃO
-    weekData.forEach(item => {
+    periodData.forEach(item => {
         const st = item.status.toLowerCase();
         
         if(st.includes('respondid')) cRespondidas++;
@@ -562,7 +554,7 @@ window.renderRADashboard = function() {
     raChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: catLabels.length > 0 ? catLabels : ['Sem notas 0 nesta semana'],
+            labels: catLabels.length > 0 ? catLabels : ['Sem notas 0 no período'],
             datasets: [{
                 label: 'Qtd Detratores',
                 data: catData.length > 0 ? catData : [0],
@@ -577,7 +569,7 @@ window.renderRADashboard = function() {
     let criticalHtml = '';
     
     if(criticalItems.length === 0) {
-        criticalHtml = `<p class="text-green-600 font-bold text-center mt-4">Nenhuma avaliação crítica encontrada na semana! 🎉</p>`;
+        criticalHtml = `<p class="text-green-600 font-bold text-center mt-4">Nenhuma avaliação crítica encontrada no período! 🎉</p>`;
     } else {
         criticalItems.forEach(c => {
             criticalHtml += `
@@ -597,7 +589,7 @@ window.renderRADashboard = function() {
     const tbody = document.getElementById('raTableBody');
     let tbodyHtml = ''; 
 
-    weekData.forEach(row => {
+    periodData.forEach(row => {
         let notaBadge = `<span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">N/I</span>`;
         if(row.nota !== '') {
             let color = 'bg-yellow-200 text-yellow-800'; 
@@ -606,7 +598,6 @@ window.renderRADashboard = function() {
             notaBadge = `<span class="${color} px-2 py-1 rounded text-xs font-bold">${row.nota}</span>`;
         }
 
-        // Limpeza de horas para exibição visual limpa
         let dateAberturaExibicao = row.abertura !== '-' ? row.abertura.toString().split(' ')[0] : '-';
         let dateRespostaExibicao = row.respondido !== '-' ? row.respondido.toString().split(' ')[0] : '-';
 
