@@ -487,7 +487,6 @@ function processRAData(data) {
     document.getElementById('uiAreaRA').classList.remove('hidden');
     document.getElementById('uiAreaRA').classList.add('flex');
 
-    // BUG RESOLVIDO: O comando fantasma "populateRAWeekSelector()" foi totalmente removido daqui.
     window.filterRADashboard(); 
 }
 
@@ -511,6 +510,7 @@ window.filterRADashboard = function() {
 }
 
 function renderRADashboard(periodData) {
+    // 1. Processamento Geral (KPIs e Gráficos que NÃO são afetados pelo filtro da tabela)
     let cAbertas = periodData.length;
     let cRespondidas = 0;
     let cAvaliadas = 0;
@@ -582,10 +582,26 @@ function renderRADashboard(periodData) {
     }
     divCritical.innerHTML = criticalHtml;
 
+    // 2. Processamento Exclusivo da Tabela com base no "Select"
+    const tableFilterElement = document.getElementById('raTableFilter');
+    const tableFilter = tableFilterElement ? tableFilterElement.value : 'all';
+
+    let tableData = periodData;
+
+    // Aplicando os filtros específicos para a tabela
+    if (tableFilter === 'avaliadas') {
+        tableData = periodData.filter(row => row.nota !== '');
+    } else if (tableFilter === 'respondidas') {
+        tableData = periodData.filter(row => row.status.toLowerCase().includes('respondid'));
+    } else if (tableFilter === 'excluidas') {
+        tableData = periodData.filter(row => row.status.toLowerCase().includes('excluíd') || row.status.toLowerCase().includes('desativada'));
+    }
+
     const tbody = document.getElementById('raTableBody');
     let tbodyHtml = ''; 
 
-    periodData.forEach(row => {
+    // Renderiza a tabela usando APENAS os dados passados pelo filtro acima
+    tableData.forEach(row => {
         let notaBadge = `<span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">N/I</span>`;
         if(row.nota !== '') {
             let color = 'bg-yellow-200 text-yellow-800'; 
@@ -611,5 +627,10 @@ function renderRADashboard(periodData) {
         `;
     });
     
+    // Mostra um aviso na tabela caso o filtro retorne vazio
+    if (tableData.length === 0) {
+        tbodyHtml = `<tr><td colspan="8" class="p-6 text-center text-gray-500 font-bold">Nenhum registro encontrado para este filtro no período.</td></tr>`;
+    }
+
     tbody.innerHTML = tbodyHtml; 
 }
