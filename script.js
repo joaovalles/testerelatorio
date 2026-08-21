@@ -375,6 +375,36 @@ let currentVisibleTableData = [];
 let raCategoryChartInstance = null; 
 let raScoreChartInstance = null;    
 
+// NOVA FUNÇÃO: Aplica a data padrão do sistema localmente
+function setRADefaultDates() {
+    const today = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(today.getDate() - 7);
+
+    // Formata manualmente para forçar o fuso horário correto (YYYY-MM-DD)
+    const formatDateLocal = (date) => {
+        let month = '' + (date.getMonth() + 1);
+        let day = '' + date.getDate();
+        const year = date.getFullYear();
+
+        if (month.length < 2) month = '0' + month;
+        if (day.length < 2) day = '0' + day;
+
+        return [year, month, day].join('-');
+    };
+
+    const inputStart = document.getElementById('raStartDate');
+    const inputEnd = document.getElementById('raEndDate');
+    
+    if (inputStart && inputEnd) {
+        inputStart.value = formatDateLocal(sevenDaysAgo);
+        inputEnd.value = formatDateLocal(today);
+    }
+}
+
+// Chama a função imediatamente para a tela já abrir com o filtro padrão preenchido
+setRADefaultDates();
+
 function parseRADateObj(dateStr) {
     if(!dateStr || dateStr === '-' || dateStr === '' || dateStr.toString().toUpperCase() === 'NÃO INFORMADO') return null;
     try {
@@ -397,14 +427,11 @@ function parseRADateObj(dateStr) {
     }
 }
 
-// Função de busca de colunas mais precisa
 function findKeyByKeywords(obj, keywords) {
     const keys = Object.keys(obj);
-    // 1. Busca exata primeiro (evita que 'cliente' pegue a coluna 'ticket' por acidente)
     for (let k of keys) {
         if (keywords.includes(k)) return k;
     }
-    // 2. Busca parcial como fallback
     for (let k of keys) {
         for (let kw of keywords) {
             if (k.includes(kw)) return k;
@@ -446,7 +473,6 @@ function processRAData(data) {
         const kNota = findKeyByKeywords(rowNorm, ['nota', 'avaliação']);
         const kCategoria = findKeyByKeywords(rowNorm, ['categoria', 'motivo', 'assunto']);
 
-        // Mantém ID e Ticket devidamente separados
         const idVal = kID ? rowNorm[kID].toString().trim() : '';
         const ticketVal = kTicket ? rowNorm[kTicket].toString().trim() : '';
         
@@ -483,14 +509,8 @@ function processRAData(data) {
         raDataAll.push(record);
     });
 
-    let validDates = raDataAll.map(r => r.dataAberturaObj).filter(d => d !== null);
-    if (validDates.length > 0) {
-        let minDate = new Date(Math.min(...validDates));
-        let maxDate = new Date(Math.max(...validDates));
-        
-        document.getElementById('raStartDate').value = minDate.toISOString().split('T')[0];
-        document.getElementById('raEndDate').value = maxDate.toISOString().split('T')[0];
-    }
+    // Quando envia nova planilha, a visão recomeça padronizada pros últimos 7 dias.
+    setRADefaultDates();
     
     document.getElementById('emptyStateRA').classList.add('hidden');
     document.getElementById('uiAreaRA').classList.remove('hidden');
@@ -640,7 +660,6 @@ window.updateRATable = function() {
 
     let tableData = currentPeriodData;
 
-    // 1. Aplica o filtro de Status
     if (tableFilter === 'avaliadas') {
         tableData = tableData.filter(row => row.nota !== '');
     } else if (tableFilter === 'respondidas') {
@@ -649,12 +668,10 @@ window.updateRATable = function() {
         tableData = tableData.filter(row => row.status.toLowerCase().includes('excluíd') || row.status.toLowerCase().includes('desativada'));
     }
 
-    // 2. Aplica o filtro da Nota assegurando que ambos sejam texto na comparação
     if (scoreFilter !== 'all') {
         tableData = tableData.filter(row => String(row.nota).trim() === String(scoreFilter).trim());
     }
 
-    // Salva a visualização final para o botão de copiar
     currentVisibleTableData = tableData;
 
     const tbody = document.getElementById('raTableBody');
@@ -672,8 +689,6 @@ window.updateRATable = function() {
         let dateAberturaExibicao = row.abertura !== '-' ? row.abertura.toString().split(' ')[0] : '-';
         let dateRespostaExibicao = row.respondido !== '-' ? row.respondido.toString().split(' ')[0] : '-';
 
-        // Geração da linha respeitando estritamente a nova ordem: 
-        // Data Abertura > Data Resposta > Pedido > Ticket > ID > Cliente > Status > Nota > Categoria
         tbodyHtml += `
             <tr class="border-b hover:bg-gray-50">
                 <td class="p-2 border whitespace-nowrap text-xs">${dateAberturaExibicao}</td>
@@ -696,7 +711,6 @@ window.updateRATable = function() {
     tbody.innerHTML = tbodyHtml; 
 }
 
-// Cópia atualizada seguindo a mesma ordem das colunas no HTML
 window.copyRATableData = function() {
     const dataToCopy = currentVisibleTableData || [];
     
