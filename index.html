@@ -265,20 +265,20 @@
                     <h3 class="text-lg font-bold text-gray-800">Detalhamento do Período Filtrado</h3>
                     
                     <div class="flex flex-wrap items-center justify-end gap-3">
-                        <!-- NOVO: Filtro por nota específica -->
+                        <!-- Filtro por nota específica -->
                         <select id="raScoreFilter" onchange="updateRATable()" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-2 shadow-sm font-semibold outline-none cursor-pointer">
-                            <option value="all">Todas as Notas</option>
-                            <option value="10">Apenas Nota 10</option>
-                            <option value="9">Apenas Nota 9</option>
-                            <option value="8">Apenas Nota 8</option>
-                            <option value="7">Apenas Nota 7</option>
-                            <option value="6">Apenas Nota 6</option>
-                            <option value="5">Apenas Nota 5</option>
-                            <option value="4">Apenas Nota 4</option>
-                            <option value="3">Apenas Nota 3</option>
-                            <option value="2">Apenas Nota 2</option>
-                            <option value="1">Apenas Nota 1</option>
-                            <option value="0">Apenas Nota 0</option>
+                            <option value="all">Filtro: Todas as Notas</option>
+                            <option value="10">Filtro: Apenas Nota 10</option>
+                            <option value="9">Filtro: Apenas Nota 9</option>
+                            <option value="8">Filtro: Apenas Nota 8</option>
+                            <option value="7">Filtro: Apenas Nota 7</option>
+                            <option value="6">Filtro: Apenas Nota 6</option>
+                            <option value="5">Filtro: Apenas Nota 5</option>
+                            <option value="4">Filtro: Apenas Nota 4</option>
+                            <option value="3">Filtro: Apenas Nota 3</option>
+                            <option value="2">Filtro: Apenas Nota 2</option>
+                            <option value="1">Filtro: Apenas Nota 1</option>
+                            <option value="0">Filtro: Apenas Nota 0</option>
                         </select>
 
                         <!-- Filtro por status já existente -->
@@ -289,7 +289,7 @@
                             <option value="excluidas">Status: Apenas Excluídas</option>
                         </select>
 
-                        <!-- NOVO: Botão de Copiar Tabela -->
+                        <!-- Botão de Copiar Tabela -->
                         <button onclick="copyRATableData()" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow transition flex items-center gap-2">
                             📋 Copiar Dados
                         </button>
@@ -302,8 +302,9 @@
                             <tr class="text-gray-700">
                                 <th class="p-3 border text-left font-bold whitespace-nowrap">Data Abertura</th>
                                 <th class="p-3 border text-left font-bold whitespace-nowrap">Data Resposta</th>
-                                <th class="p-3 border text-left font-bold">ID / Ticket</th>
+                                <th class="p-3 border text-left font-bold">ID</th>
                                 <th class="p-3 border text-left font-bold">Pedido</th>
+                                <th class="p-3 border text-left font-bold">Ticket</th>
                                 <th class="p-3 border text-left font-bold">Cliente</th>
                                 <th class="p-3 border text-left font-bold">Status</th>
                                 <th class="p-3 border text-center font-bold">Nota</th>
