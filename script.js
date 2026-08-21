@@ -371,6 +371,7 @@ window.generatePDF = function() {
 
 let raDataAll = []; 
 let currentPeriodData = []; 
+let currentVisibleTableData = []; // VARIÁVEL GLOBAL PARA GUARDAR OS DADOS VISÍVEIS (P/ COPIAR)
 let raCategoryChartInstance = null; 
 let raScoreChartInstance = null;    
 
@@ -454,7 +455,6 @@ function processRAData(data) {
         
         if (idTicketFinal === '-') idTicketFinal = 'NÃO INFORMADO';
 
-        // CONVERSÃO REFORÇADA PARA O GRÁFICO (Remove ponto flutuante tipo 10.0)
         let notaVal = kNota ? rowNorm[kNota].toString().trim().toUpperCase() : '';
         if (['NÃO INFORMADO', 'NAO INFORMADO', 'NAN', '-', '', 'N/I', 'N/A', 'NULL'].includes(notaVal)) {
             notaVal = '';
@@ -632,19 +632,32 @@ function renderRADashboard(periodData) {
     divCritical.innerHTML = criticalHtml;
 }
 
+// FUNÇÃO ATUALIZADA: Aplicando filtro Duplo (Status e Nota)
 window.updateRATable = function() {
     const tableFilterElement = document.getElementById('raTableFilter');
     const tableFilter = tableFilterElement ? tableFilterElement.value : 'all';
 
+    const scoreFilterElement = document.getElementById('raScoreFilter');
+    const scoreFilter = scoreFilterElement ? scoreFilterElement.value : 'all';
+
     let tableData = currentPeriodData;
 
+    // 1. Aplica o filtro de Status/Estado
     if (tableFilter === 'avaliadas') {
-        tableData = currentPeriodData.filter(row => row.nota !== '');
+        tableData = tableData.filter(row => row.nota !== '');
     } else if (tableFilter === 'respondidas') {
-        tableData = currentPeriodData.filter(row => row.status.toLowerCase().includes('respondid'));
+        tableData = tableData.filter(row => row.status.toLowerCase().includes('respondid'));
     } else if (tableFilter === 'excluidas') {
-        tableData = currentPeriodData.filter(row => row.status.toLowerCase().includes('excluíd') || row.status.toLowerCase().includes('desativada'));
+        tableData = tableData.filter(row => row.status.toLowerCase().includes('excluíd') || row.status.toLowerCase().includes('desativada'));
     }
+
+    // 2. Aplica o filtro Numérico da Nota (Sobrepõe ao filtro 1)
+    if (scoreFilter !== 'all') {
+        tableData = tableData.filter(row => row.nota === scoreFilter);
+    }
+
+    // Salva os dados em exibição para a função de COPIAR
+    currentVisibleTableData = tableData;
 
     const tbody = document.getElementById('raTableBody');
     let tbodyHtml = ''; 
@@ -676,8 +689,35 @@ window.updateRATable = function() {
     });
     
     if (tableData.length === 0) {
-        tbodyHtml = `<tr><td colspan="8" class="p-6 text-center text-gray-500 font-bold bg-gray-50">Nenhum registro encontrado para este filtro no período.</td></tr>`;
+        tbodyHtml = `<tr><td colspan="8" class="p-6 text-center text-gray-500 font-bold bg-gray-50">Nenhum registro encontrado para a combinação destes filtros no período.</td></tr>`;
     }
 
     tbody.innerHTML = tbodyHtml; 
+}
+
+// NOVA FUNÇÃO: Copiar dados da tabela para Excel/WhatsApp
+window.copyRATableData = function() {
+    const dataToCopy = currentVisibleTableData || [];
+    
+    if(dataToCopy.length === 0) {
+        alert("Não há dados na tabela para copiar!");
+        return;
+    }
+    
+    // Cabeçalho separado por "Tab" (\t) para cair certinho nas colunas do Excel
+    let tsvData = "Data Abertura\tData Resposta\tID / Ticket\tPedido\tCliente\tStatus\tNota\tCategoria\n";
+    
+    dataToCopy.forEach(row => {
+        let dateAb = row.abertura !== '-' ? row.abertura.toString().split(' ')[0] : '-';
+        let dateRe = row.respondido !== '-' ? row.respondido.toString().split(' ')[0] : '-';
+        let notaStr = row.nota !== '' ? row.nota : 'N/I';
+        
+        tsvData += `${dateAb}\t${dateRe}\t${row.ticketId}\t${row.pedido}\t${row.cliente}\t${row.status}\t${notaStr}\t${row.categoria}\n`;
+    });
+    
+    navigator.clipboard.writeText(tsvData).then(() => { 
+        alert(`Sucesso! ${dataToCopy.length} registros foram copiados para a sua área de transferência.`); 
+    }).catch(err => {
+        alert("Erro ao copiar os dados. O seu navegador pode ter bloqueado a ação.");
+    });
 }
