@@ -370,6 +370,7 @@ window.generatePDF = function() {
 // =============================================================
 
 let raDataAll = []; 
+let currentPeriodData = []; // VARIÁVEL GLOBAL PARA MANTER OS DADOS DO PERÍODO
 let raChartInstance = null;
 
 function parseRADateObj(dateStr) {
@@ -452,8 +453,9 @@ function processRAData(data) {
         
         if (idTicketFinal === '-') idTicketFinal = 'NÃO INFORMADO';
 
+        // LIMPEZA REFORÇADA PARA O FILTRO DE AVALIAÇÃO FUNCIONAR PERFEITO
         let notaVal = kNota ? rowNorm[kNota].toString().trim().toUpperCase() : '';
-        if (notaVal === 'NÃO INFORMADO' || notaVal === 'NAN' || notaVal === '-' || notaVal === '') {
+        if (['NÃO INFORMADO', 'NAO INFORMADO', 'NAN', '-', '', 'N/I', 'N/A', 'NULL'].includes(notaVal)) {
             notaVal = '';
         }
 
@@ -490,6 +492,7 @@ function processRAData(data) {
     window.filterRADashboard(); 
 }
 
+// 1. FUNÇÃO QUE FILTRA DATAS E ATUALIZA KPIs GERAIS
 window.filterRADashboard = function() {
     const startVal = document.getElementById('raStartDate').value;
     const endVal = document.getElementById('raEndDate').value;
@@ -506,11 +509,12 @@ window.filterRADashboard = function() {
         filteredData = filteredData.filter(r => r.dataAberturaObj && r.dataAberturaObj <= endDate);
     }
 
-    renderRADashboard(filteredData);
+    currentPeriodData = filteredData; // Guarda os dados filtrados pela data
+    renderRADashboard(filteredData);  // Desenha os gráficos e números
+    window.updateRATable();           // Manda a tabela se desenhar com o filtro ativo
 }
 
 function renderRADashboard(periodData) {
-    // 1. Processamento Geral (KPIs e Gráficos que NÃO são afetados pelo filtro da tabela)
     let cAbertas = periodData.length;
     let cRespondidas = 0;
     let cAvaliadas = 0;
@@ -581,26 +585,27 @@ function renderRADashboard(periodData) {
         });
     }
     divCritical.innerHTML = criticalHtml;
+}
 
-    // 2. Processamento Exclusivo da Tabela com base no "Select"
+// 2. FUNÇÃO INDEPENDENTE QUE FILTRA E DESENHA SOMENTE A TABELA
+window.updateRATable = function() {
     const tableFilterElement = document.getElementById('raTableFilter');
     const tableFilter = tableFilterElement ? tableFilterElement.value : 'all';
 
-    let tableData = periodData;
+    let tableData = currentPeriodData;
 
-    // Aplicando os filtros específicos para a tabela
+    // Aplica a lógica exclusiva da tabela
     if (tableFilter === 'avaliadas') {
-        tableData = periodData.filter(row => row.nota !== '');
+        tableData = currentPeriodData.filter(row => row.nota !== '');
     } else if (tableFilter === 'respondidas') {
-        tableData = periodData.filter(row => row.status.toLowerCase().includes('respondid'));
+        tableData = currentPeriodData.filter(row => row.status.toLowerCase().includes('respondid'));
     } else if (tableFilter === 'excluidas') {
-        tableData = periodData.filter(row => row.status.toLowerCase().includes('excluíd') || row.status.toLowerCase().includes('desativada'));
+        tableData = currentPeriodData.filter(row => row.status.toLowerCase().includes('excluíd') || row.status.toLowerCase().includes('desativada'));
     }
 
     const tbody = document.getElementById('raTableBody');
     let tbodyHtml = ''; 
 
-    // Renderiza a tabela usando APENAS os dados passados pelo filtro acima
     tableData.forEach(row => {
         let notaBadge = `<span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">N/I</span>`;
         if(row.nota !== '') {
@@ -627,9 +632,9 @@ function renderRADashboard(periodData) {
         `;
     });
     
-    // Mostra um aviso na tabela caso o filtro retorne vazio
+    // Tratativa caso o filtro não encontre nada
     if (tableData.length === 0) {
-        tbodyHtml = `<tr><td colspan="8" class="p-6 text-center text-gray-500 font-bold">Nenhum registro encontrado para este filtro no período.</td></tr>`;
+        tbodyHtml = `<tr><td colspan="8" class="p-6 text-center text-gray-500 font-bold bg-gray-50">Nenhum registro encontrado para este filtro no período.</td></tr>`;
     }
 
     tbody.innerHTML = tbodyHtml; 

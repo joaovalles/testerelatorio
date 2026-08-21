@@ -256,8 +256,8 @@
                 <div class="flex flex-col sm:flex-row justify-between items-center mb-4 border-b pb-2 gap-4">
                     <h3 class="text-lg font-bold text-gray-800">Detalhamento do Período Filtrado</h3>
                     
-                    <!-- NOVO: Filtro da Tabela -->
-                    <select id="raTableFilter" onchange="filterRADashboard()" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-2 shadow-sm font-semibold outline-none cursor-pointer">
+                    <!-- ATUALIZAÇÃO: Evento alterado para atualizar SOMENTE a tabela -->
+                    <select id="raTableFilter" onchange="updateRATable()" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-2 shadow-sm font-semibold outline-none cursor-pointer">
                         <option value="all">Filtro: Todas as Reclamações</option>
                         <option value="avaliadas">Filtro: Apenas Avaliadas</option>
                         <option value="respondidas">Filtro: Apenas Respondidas</option>
