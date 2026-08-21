@@ -116,11 +116,11 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="bg-white p-6 rounded-lg shadow-md border border-gray-300">
                             <h3 class="text-lg font-bold mb-4 text-center text-gray-700">Volume por Setor</h3>
-                            <div class="relative h-64"><canvas id="sectorChart"></canvas></div>
+                            <div class="relative h-64 w-full"><canvas id="sectorChart"></canvas></div>
                         </div>
                         <div class="bg-white p-6 rounded-lg shadow-md border border-gray-300">
                             <h3 class="text-lg font-bold mb-4 text-center text-gray-700">Gargalos por Status (Ativos)</h3>
-                            <div class="relative h-64"><canvas id="statusChart"></canvas></div>
+                            <div class="relative h-64 w-full"><canvas id="statusChart"></canvas></div>
                         </div>
                     </div>
 
@@ -235,18 +235,18 @@
                 </div>
             </div>
 
-            <!-- Gráfico e Alertas (ATUALIZADO) -->
+            <!-- Gráfico e Alertas -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- GRÁFICO 1: Distribuição das Notas -->
-                <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200 flex flex-col">
+                <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
                     <h3 class="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Distribuição de Notas (0 a 10)</h3>
-                    <div class="relative flex-grow min-h-[250px]"><canvas id="raScoreChart"></canvas></div>
+                    <div class="relative h-72 w-full"><canvas id="raScoreChart"></canvas></div>
                 </div>
 
                 <!-- GRÁFICO 2: Categorias Críticas -->
-                <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200 flex flex-col">
-                    <h3 class="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Críticas por Categoria (Nota 0)</h3>
-                    <div class="relative flex-grow min-h-[250px]"><canvas id="raCategoryChart"></canvas></div>
+                <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                    <h3 class="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Críticas (Nota 0 / Não Resolvido)</h3>
+                    <div class="relative h-72 w-full"><canvas id="raCategoryChart"></canvas></div>
                 </div>
                 
                 <!-- ALERTAS: Detratores -->

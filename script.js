@@ -371,8 +371,8 @@ window.generatePDF = function() {
 
 let raDataAll = []; 
 let currentPeriodData = []; 
-let raCategoryChartInstance = null; // Variável atualizada
-let raScoreChartInstance = null;    // Novo gráfico de Notas
+let raCategoryChartInstance = null; 
+let raScoreChartInstance = null;    
 
 function parseRADateObj(dateStr) {
     if(!dateStr || dateStr === '-' || dateStr === '' || dateStr.toString().toUpperCase() === 'NÃO INFORMADO') return null;
@@ -454,9 +454,17 @@ function processRAData(data) {
         
         if (idTicketFinal === '-') idTicketFinal = 'NÃO INFORMADO';
 
+        // CONVERSÃO REFORÇADA PARA O GRÁFICO (Remove ponto flutuante tipo 10.0)
         let notaVal = kNota ? rowNorm[kNota].toString().trim().toUpperCase() : '';
         if (['NÃO INFORMADO', 'NAO INFORMADO', 'NAN', '-', '', 'N/I', 'N/A', 'NULL'].includes(notaVal)) {
             notaVal = '';
+        } else {
+            const parsedNota = parseInt(notaVal);
+            if (!isNaN(parsedNota)) {
+                notaVal = parsedNota.toString();
+            } else {
+                notaVal = '';
+            }
         }
 
         const aberturaStr = kAbertura ? rowNorm[kAbertura].toString().trim() : '-';
@@ -521,7 +529,7 @@ function renderRADashboard(periodData) {
     let cExcluidas = 0;
     
     let categoriasNotaZero = {};
-    let scoreCounts = {}; // Novo contador de distribuição de notas
+    let scoreCounts = {}; 
     let criticalItems = []; 
 
     periodData.forEach(item => {
@@ -529,7 +537,6 @@ function renderRADashboard(periodData) {
         
         if(st.includes('respondid')) cRespondidas++;
         
-        // Se a reclamação foi avaliada, incrementa o contador daquela nota específica
         if(item.nota !== '') {
             cAvaliadas++;
             scoreCounts[item.nota] = (scoreCounts[item.nota] || 0) + 1;
@@ -551,21 +558,16 @@ function renderRADashboard(periodData) {
     document.getElementById('raKpiResolvidas').innerText = cResolvidas;
     document.getElementById('raKpiExcluidas').innerText = cExcluidas;
 
-    // ==========================================
-    // 1. RENDERIZAR NOVO GRÁFICO (DISTRIBUIÇÃO DE NOTAS)
-    // ==========================================
     if(raScoreChartInstance) raScoreChartInstance.destroy();
     
-    // Configura o eixo X do 0 ao 10 e busca os valores contados (ou 0)
     const scoreLabels = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
     const scoreData = scoreLabels.map(lbl => scoreCounts[lbl] || 0);
     
-    // Regra de Cores: 0 a 3 (Vermelho), 4 a 6 (Amarelo), 7 a 10 (Verde)
     const scoreColors = scoreLabels.map(lbl => {
         const nota = parseInt(lbl);
-        if (nota <= 3) return '#ef4444'; // red-500
-        if (nota <= 6) return '#eab308'; // yellow-500
-        return '#22c55e'; // green-500
+        if (nota <= 3) return '#ef4444'; 
+        if (nota <= 6) return '#eab308'; 
+        return '#22c55e'; 
     });
 
     const ctxScore = document.getElementById('raScoreChart').getContext('2d');
@@ -574,7 +576,7 @@ function renderRADashboard(periodData) {
         data: {
             labels: scoreLabels,
             datasets: [{
-                label: 'Qtd Reclamações Avaliadas',
+                label: 'Qtd Reclamações',
                 data: scoreData,
                 backgroundColor: scoreColors, 
                 borderRadius: 4
@@ -588,9 +590,6 @@ function renderRADashboard(periodData) {
         }
     });
 
-    // ==========================================
-    // 2. RENDERIZAR GRÁFICO DE CATEGORIAS (MANTIDO E LADO A LADO)
-    // ==========================================
     if(raCategoryChartInstance) raCategoryChartInstance.destroy();
     
     const catLabels = Object.keys(categoriasNotaZero);
@@ -611,9 +610,6 @@ function renderRADashboard(periodData) {
         options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } }
     });
 
-    // ==========================================
-    // 3. ATUALIZAR LISTA DE ATENÇÃO
-    // ==========================================
     const divCritical = document.getElementById('raCriticalList');
     let criticalHtml = '';
     
