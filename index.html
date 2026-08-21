@@ -85,7 +85,6 @@
 
         <!-- Conteúdo Logística -->
         <div>
-            <!-- ABA 1: ANÁLISE -->
             <div id="tab-analise" class="flex flex-col gap-6">
                 <div id="emptyState" class="bg-white p-12 text-center rounded-lg shadow-md text-gray-500">
                     <span class="text-4xl mb-4 block">📈</span>
@@ -106,9 +105,7 @@
                             </div>
                         </div>
                         <table class="w-full dark-table border-collapse text-sm" id="mainTable">
-                            <thead>
-                                <tr><th>Status</th><th>Setor Responsável</th><th>QTD</th></tr>
-                            </thead>
+                            <thead><tr><th>Status</th><th>Setor Responsável</th><th>QTD</th></tr></thead>
                             <tbody id="tableBody"></tbody>
                         </table>
                     </div>
@@ -132,7 +129,6 @@
                 </div>
             </div>
 
-            <!-- ABA 2: HISTÓRICO -->
             <div id="tab-historico" class="hidden">
                 <div class="bg-white p-6 rounded-lg shadow-md">
                     <div class="flex justify-between items-center mb-6 border-b pb-4">
@@ -142,19 +138,14 @@
                     <div class="overflow-x-auto">
                         <table class="w-full border-collapse">
                             <thead>
-                                <tr class="bg-gray-100 text-gray-700">
-                                    <th class="p-3 border text-left">Data do Relatório</th><th class="p-3 border text-center">Total</th><th class="p-3 border text-left">Criado por</th><th class="p-3 border text-center">Ações</th>
-                                </tr>
+                                <tr class="bg-gray-100 text-gray-700"><th class="p-3 border text-left">Data do Relatório</th><th class="p-3 border text-center">Total</th><th class="p-3 border text-left">Criado por</th><th class="p-3 border text-center">Ações</th></tr>
                             </thead>
-                            <tbody id="historyTableBody">
-                                <tr><td colspan="4" class="p-4 text-center">Carregando dados da nuvem...</td></tr>
-                            </tbody>
+                            <tbody id="historyTableBody"><tr><td colspan="4" class="p-4 text-center">Carregando dados da nuvem...</td></tr></tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <!-- ABA 3: CONTA -->
             <div id="tab-conta" class="hidden">
                 <div class="bg-white p-6 rounded-lg shadow-md max-w-lg mx-auto">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">Alterar Senha de Acesso</h2>
@@ -171,7 +162,6 @@
     <!-- =========== MÓDULO 2: RECLAME AQUI =========== -->
     <div id="module-ra" class="main-ui hidden max-w-[1400px] mx-auto p-4 md:p-6">
         
-        <!-- Cabeçalho RA -->
         <header class="bg-purple-900 text-white p-6 rounded-lg shadow-md flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
             <div class="text-center md:text-left">
                 <h1 class="text-2xl font-bold">Dashboard - Reclame Aqui</h1>
@@ -185,16 +175,13 @@
             </div>
         </header>
 
-        <!-- Estado Vazio RA -->
         <div id="emptyStateRA" class="bg-white p-12 text-center rounded-lg shadow-md text-gray-500">
             <span class="text-4xl mb-4 block">🗣️</span>
             <p class="text-lg">Carregue a planilha de histórico do Reclame Aqui para visualizar os relatórios.</p>
         </div>
 
-        <!-- Área de Dados RA -->
         <div id="uiAreaRA" class="hidden flex-col gap-6">
             
-            <!-- Controle de Datas -->
             <div class="bg-white p-5 rounded-lg shadow-md flex flex-col lg:flex-row justify-between items-center gap-4 border-l-4 border-purple-500">
                 <div class="font-bold text-gray-700 text-lg">Filtre por Período de Abertura:</div>
                 <div class="flex flex-wrap items-center justify-center gap-4">
@@ -211,7 +198,6 @@
                 </div>
             </div>
 
-            <!-- KPIs Semanais -->
             <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div class="bg-white p-4 rounded-lg shadow border-b-4 border-blue-500 text-center">
                     <p class="text-sm text-gray-500 font-bold uppercase">Abertas</p>
@@ -235,37 +221,30 @@
                 </div>
             </div>
 
-            <!-- Gráfico e Alertas -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- GRÁFICO 1: Distribuição das Notas -->
                 <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
                     <h3 class="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Distribuição de Notas (0 a 10)</h3>
                     <div class="relative h-72 w-full"><canvas id="raScoreChart"></canvas></div>
                 </div>
 
-                <!-- GRÁFICO 2: Categorias Críticas -->
                 <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
                     <h3 class="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Críticas (Nota 0 / Não Resolvido)</h3>
                     <div class="relative h-72 w-full"><canvas id="raCategoryChart"></canvas></div>
                 </div>
                 
-                <!-- ALERTAS: Detratores -->
                 <div class="bg-red-50 p-6 rounded-lg shadow-md border border-red-200 flex flex-col">
                     <h3 class="text-lg font-bold mb-4 text-red-800 border-b border-red-200 pb-2">Atenção Crítica 🚨</h3>
                     <p class="text-sm text-red-700 mb-4">Reclamações do período que receberam nota zero ou foram categorizadas como não resolvidas.</p>
-                    <div class="overflow-y-auto flex-grow max-h-56 pr-2" id="raCriticalList">
-                        <!-- Preenchido via JS -->
-                    </div>
+                    <div class="overflow-y-auto flex-grow max-h-56 pr-2" id="raCriticalList"></div>
                 </div>
             </div>
 
-            <!-- Tabela Detalhada RA COM NOVOS FILTROS -->
+            <!-- Tabela Detalhada RA com NOVA ORDEM -->
             <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
                 <div class="flex flex-col lg:flex-row justify-between items-center mb-4 border-b pb-3 gap-4">
                     <h3 class="text-lg font-bold text-gray-800">Detalhamento do Período Filtrado</h3>
                     
                     <div class="flex flex-wrap items-center justify-end gap-3">
-                        <!-- Filtro por nota específica -->
                         <select id="raScoreFilter" onchange="updateRATable()" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-2 shadow-sm font-semibold outline-none cursor-pointer">
                             <option value="all">Filtro: Todas as Notas</option>
                             <option value="10">Filtro: Apenas Nota 10</option>
@@ -281,7 +260,6 @@
                             <option value="0">Filtro: Apenas Nota 0</option>
                         </select>
 
-                        <!-- Filtro por status já existente -->
                         <select id="raTableFilter" onchange="updateRATable()" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-2 shadow-sm font-semibold outline-none cursor-pointer">
                             <option value="all">Status: Todas as Reclamações</option>
                             <option value="avaliadas">Status: Apenas Avaliadas</option>
@@ -289,7 +267,6 @@
                             <option value="excluidas">Status: Apenas Excluídas</option>
                         </select>
 
-                        <!-- Botão de Copiar Tabela -->
                         <button onclick="copyRATableData()" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow transition flex items-center gap-2">
                             📋 Copiar Dados
                         </button>
@@ -299,12 +276,13 @@
                 <div class="overflow-x-auto overflow-y-auto max-h-96">
                     <table class="w-full border-collapse text-sm">
                         <thead class="sticky top-0 bg-gray-100 shadow-sm z-10">
+                            <!-- ORDEM EXATA DA PLANILHA NO CABEÇALHO -->
                             <tr class="text-gray-700">
                                 <th class="p-3 border text-left font-bold whitespace-nowrap">Data Abertura</th>
                                 <th class="p-3 border text-left font-bold whitespace-nowrap">Data Resposta</th>
-                                <th class="p-3 border text-left font-bold">ID</th>
                                 <th class="p-3 border text-left font-bold">Pedido</th>
                                 <th class="p-3 border text-left font-bold">Ticket</th>
+                                <th class="p-3 border text-left font-bold">ID</th>
                                 <th class="p-3 border text-left font-bold">Cliente</th>
                                 <th class="p-3 border text-left font-bold">Status</th>
                                 <th class="p-3 border text-center font-bold">Nota</th>

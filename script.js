@@ -371,7 +371,7 @@ window.generatePDF = function() {
 
 let raDataAll = []; 
 let currentPeriodData = []; 
-let currentVisibleTableData = []; // VARIÁVEL GLOBAL PARA GUARDAR OS DADOS VISÍVEIS (P/ COPIAR)
+let currentVisibleTableData = []; 
 let raCategoryChartInstance = null; 
 let raScoreChartInstance = null;    
 
@@ -397,11 +397,14 @@ function parseRADateObj(dateStr) {
     }
 }
 
+// Função de busca de colunas mais precisa
 function findKeyByKeywords(obj, keywords) {
     const keys = Object.keys(obj);
+    // 1. Busca exata primeiro (evita que 'cliente' pegue a coluna 'ticket' por acidente)
     for (let k of keys) {
         if (keywords.includes(k)) return k;
     }
+    // 2. Busca parcial como fallback
     for (let k of keys) {
         for (let kw of keywords) {
             if (k.includes(kw)) return k;
@@ -435,15 +438,15 @@ function processRAData(data) {
 
         const kAbertura = findKeyByKeywords(rowNorm, ['entrada', 'data de abertura', 'criado']);
         const kRespondido = findKeyByKeywords(rowNorm, ['data da resposta', 'respondida em']);
+        const kPedido = findKeyByKeywords(rowNorm, ['pedido', 'número do pedido']);
         const kTicket = findKeyByKeywords(rowNorm, ['ticket']);
         const kID = findKeyByKeywords(rowNorm, ['id']);
-        const kPedido = findKeyByKeywords(rowNorm, ['pedido', 'número do pedido']);
         const kCliente = findKeyByKeywords(rowNorm, ['cliente', 'nome do consumidor']);
         const kStatus = findKeyByKeywords(rowNorm, ['situação', 'status']);
         const kNota = findKeyByKeywords(rowNorm, ['nota', 'avaliação']);
         const kCategoria = findKeyByKeywords(rowNorm, ['categoria', 'motivo', 'assunto']);
 
-        // SEPARAÇÃO DEFINITIVA DO ID E TICKET
+        // Mantém ID e Ticket devidamente separados
         const idVal = kID ? rowNorm[kID].toString().trim() : '';
         const ticketVal = kTicket ? rowNorm[kTicket].toString().trim() : '';
         
@@ -468,9 +471,9 @@ function processRAData(data) {
             abertura: aberturaStr,
             dataAberturaObj: parseRADateObj(aberturaStr), 
             respondido: kRespondido ? rowNorm[kRespondido].toString().trim() : '-',
-            idRA: finalId, // Armazena apenas o ID
             pedido: kPedido ? rowNorm[kPedido].toString().trim() : '-',
-            ticket: finalTicket, // Armazena apenas o Ticket
+            ticket: finalTicket, 
+            idRA: finalId, 
             cliente: kCliente ? rowNorm[kCliente].toString().trim() : '-',
             status: kStatus ? rowNorm[kStatus].toString().trim() : 'Sem Status',
             nota: notaVal,
@@ -628,7 +631,6 @@ function renderRADashboard(periodData) {
     divCritical.innerHTML = criticalHtml;
 }
 
-// FUNÇÃO ATUALIZADA: Aplicando filtro Duplo (Status e Nota) com Conversão Reforçada
 window.updateRATable = function() {
     const tableFilterElement = document.getElementById('raTableFilter');
     const tableFilter = tableFilterElement ? tableFilterElement.value : 'all';
@@ -638,7 +640,7 @@ window.updateRATable = function() {
 
     let tableData = currentPeriodData;
 
-    // 1. Aplica o filtro de Status/Estado
+    // 1. Aplica o filtro de Status
     if (tableFilter === 'avaliadas') {
         tableData = tableData.filter(row => row.nota !== '');
     } else if (tableFilter === 'respondidas') {
@@ -647,12 +649,12 @@ window.updateRATable = function() {
         tableData = tableData.filter(row => row.status.toLowerCase().includes('excluíd') || row.status.toLowerCase().includes('desativada'));
     }
 
-    // 2. Aplica o filtro Numérico da Nota blindado (Garante que está comparando textos idênticos)
+    // 2. Aplica o filtro da Nota assegurando que ambos sejam texto na comparação
     if (scoreFilter !== 'all') {
-        tableData = tableData.filter(row => String(row.nota) === String(scoreFilter));
+        tableData = tableData.filter(row => String(row.nota).trim() === String(scoreFilter).trim());
     }
 
-    // Salva os dados em exibição para a função de COPIAR
+    // Salva a visualização final para o botão de copiar
     currentVisibleTableData = tableData;
 
     const tbody = document.getElementById('raTableBody');
@@ -670,13 +672,15 @@ window.updateRATable = function() {
         let dateAberturaExibicao = row.abertura !== '-' ? row.abertura.toString().split(' ')[0] : '-';
         let dateRespostaExibicao = row.respondido !== '-' ? row.respondido.toString().split(' ')[0] : '-';
 
+        // Geração da linha respeitando estritamente a nova ordem: 
+        // Data Abertura > Data Resposta > Pedido > Ticket > ID > Cliente > Status > Nota > Categoria
         tbodyHtml += `
             <tr class="border-b hover:bg-gray-50">
                 <td class="p-2 border whitespace-nowrap text-xs">${dateAberturaExibicao}</td>
                 <td class="p-2 border whitespace-nowrap text-xs text-blue-700 font-semibold">${dateRespostaExibicao}</td>
-                <td class="p-2 border font-mono font-bold text-purple-700">${row.idRA}</td>
-                <td class="p-2 border text-gray-600 text-xs">${row.pedido}</td>
+                <td class="p-2 border text-gray-800 font-bold font-mono text-xs">${row.pedido}</td>
                 <td class="p-2 border font-mono font-bold text-indigo-600">${row.ticket}</td>
+                <td class="p-2 border font-mono font-bold text-purple-700">${row.idRA}</td>
                 <td class="p-2 border text-gray-800 max-w-[150px] truncate" title="${row.cliente}">${row.cliente}</td>
                 <td class="p-2 border text-xs font-semibold text-gray-600 uppercase">${row.status}</td>
                 <td class="p-2 border text-center">${notaBadge}</td>
@@ -685,7 +689,6 @@ window.updateRATable = function() {
         `;
     });
     
-    // Atualizado o colspan para 9 por causa da nova coluna
     if (tableData.length === 0) {
         tbodyHtml = `<tr><td colspan="9" class="p-6 text-center text-gray-500 font-bold bg-gray-50">Nenhum registro encontrado para a combinação destes filtros no período.</td></tr>`;
     }
@@ -693,7 +696,7 @@ window.updateRATable = function() {
     tbody.innerHTML = tbodyHtml; 
 }
 
-// NOVA FUNÇÃO: Copiar dados da tabela para Excel/WhatsApp com colunas separadas
+// Cópia atualizada seguindo a mesma ordem das colunas no HTML
 window.copyRATableData = function() {
     const dataToCopy = currentVisibleTableData || [];
     
@@ -702,19 +705,18 @@ window.copyRATableData = function() {
         return;
     }
     
-    // Cabeçalho separado por "Tab" (\t) para cair certinho nas colunas do Excel
-    let tsvData = "Data Abertura\tData Resposta\tID\tPedido\tTicket\tCliente\tStatus\tNota\tCategoria\n";
+    let tsvData = "Data Abertura\tData Resposta\tPedido\tTicket\tID\tCliente\tStatus\tNota\tCategoria\n";
     
     dataToCopy.forEach(row => {
         let dateAb = row.abertura !== '-' ? row.abertura.toString().split(' ')[0] : '-';
         let dateRe = row.respondido !== '-' ? row.respondido.toString().split(' ')[0] : '-';
         let notaStr = row.nota !== '' ? row.nota : 'N/I';
         
-        tsvData += `${dateAb}\t${dateRe}\t${row.idRA}\t${row.pedido}\t${row.ticket}\t${row.cliente}\t${row.status}\t${notaStr}\t${row.categoria}\n`;
+        tsvData += `${dateAb}\t${dateRe}\t${row.pedido}\t${row.ticket}\t${row.idRA}\t${row.cliente}\t${row.status}\t${notaStr}\t${row.categoria}\n`;
     });
     
     navigator.clipboard.writeText(tsvData).then(() => { 
-        alert(`Sucesso! ${dataToCopy.length} registros foram copiados para a sua área de transferência e estão prontos para colar na planilha.`); 
+        alert(`Sucesso! ${dataToCopy.length} registros foram copiados. A ordem já está pronta (Pedido > Ticket > ID...) para colar no Excel.`); 
     }).catch(err => {
         alert("Erro ao copiar os dados. O seu navegador pode ter bloqueado a ação.");
     });
