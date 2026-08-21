@@ -370,8 +370,9 @@ window.generatePDF = function() {
 // =============================================================
 
 let raDataAll = []; 
-let currentPeriodData = []; // VARIÁVEL GLOBAL PARA MANTER OS DADOS DO PERÍODO
-let raChartInstance = null;
+let currentPeriodData = []; 
+let raCategoryChartInstance = null; // Variável atualizada
+let raScoreChartInstance = null;    // Novo gráfico de Notas
 
 function parseRADateObj(dateStr) {
     if(!dateStr || dateStr === '-' || dateStr === '' || dateStr.toString().toUpperCase() === 'NÃO INFORMADO') return null;
@@ -453,7 +454,6 @@ function processRAData(data) {
         
         if (idTicketFinal === '-') idTicketFinal = 'NÃO INFORMADO';
 
-        // LIMPEZA REFORÇADA PARA O FILTRO DE AVALIAÇÃO FUNCIONAR PERFEITO
         let notaVal = kNota ? rowNorm[kNota].toString().trim().toUpperCase() : '';
         if (['NÃO INFORMADO', 'NAO INFORMADO', 'NAN', '-', '', 'N/I', 'N/A', 'NULL'].includes(notaVal)) {
             notaVal = '';
@@ -492,7 +492,6 @@ function processRAData(data) {
     window.filterRADashboard(); 
 }
 
-// 1. FUNÇÃO QUE FILTRA DATAS E ATUALIZA KPIs GERAIS
 window.filterRADashboard = function() {
     const startVal = document.getElementById('raStartDate').value;
     const endVal = document.getElementById('raEndDate').value;
@@ -509,9 +508,9 @@ window.filterRADashboard = function() {
         filteredData = filteredData.filter(r => r.dataAberturaObj && r.dataAberturaObj <= endDate);
     }
 
-    currentPeriodData = filteredData; // Guarda os dados filtrados pela data
-    renderRADashboard(filteredData);  // Desenha os gráficos e números
-    window.updateRATable();           // Manda a tabela se desenhar com o filtro ativo
+    currentPeriodData = filteredData; 
+    renderRADashboard(filteredData);  
+    window.updateRATable();           
 }
 
 function renderRADashboard(periodData) {
@@ -522,13 +521,20 @@ function renderRADashboard(periodData) {
     let cExcluidas = 0;
     
     let categoriasNotaZero = {};
+    let scoreCounts = {}; // Novo contador de distribuição de notas
     let criticalItems = []; 
 
     periodData.forEach(item => {
         const st = item.status.toLowerCase();
         
         if(st.includes('respondid')) cRespondidas++;
-        if(item.nota !== '') cAvaliadas++;
+        
+        // Se a reclamação foi avaliada, incrementa o contador daquela nota específica
+        if(item.nota !== '') {
+            cAvaliadas++;
+            scoreCounts[item.nota] = (scoreCounts[item.nota] || 0) + 1;
+        }
+        
         if(st.includes('resolvid')) cResolvidas++;
         if(st.includes('excluíd') || st.includes('desativada')) cExcluidas++;
 
@@ -545,13 +551,53 @@ function renderRADashboard(periodData) {
     document.getElementById('raKpiResolvidas').innerText = cResolvidas;
     document.getElementById('raKpiExcluidas').innerText = cExcluidas;
 
-    if(raChartInstance) raChartInstance.destroy();
+    // ==========================================
+    // 1. RENDERIZAR NOVO GRÁFICO (DISTRIBUIÇÃO DE NOTAS)
+    // ==========================================
+    if(raScoreChartInstance) raScoreChartInstance.destroy();
+    
+    // Configura o eixo X do 0 ao 10 e busca os valores contados (ou 0)
+    const scoreLabels = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+    const scoreData = scoreLabels.map(lbl => scoreCounts[lbl] || 0);
+    
+    // Regra de Cores: 0 a 3 (Vermelho), 4 a 6 (Amarelo), 7 a 10 (Verde)
+    const scoreColors = scoreLabels.map(lbl => {
+        const nota = parseInt(lbl);
+        if (nota <= 3) return '#ef4444'; // red-500
+        if (nota <= 6) return '#eab308'; // yellow-500
+        return '#22c55e'; // green-500
+    });
+
+    const ctxScore = document.getElementById('raScoreChart').getContext('2d');
+    raScoreChartInstance = new Chart(ctxScore, {
+        type: 'bar',
+        data: {
+            labels: scoreLabels,
+            datasets: [{
+                label: 'Qtd Reclamações Avaliadas',
+                data: scoreData,
+                backgroundColor: scoreColors, 
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // ==========================================
+    // 2. RENDERIZAR GRÁFICO DE CATEGORIAS (MANTIDO E LADO A LADO)
+    // ==========================================
+    if(raCategoryChartInstance) raCategoryChartInstance.destroy();
     
     const catLabels = Object.keys(categoriasNotaZero);
     const catData = Object.values(categoriasNotaZero);
     
-    const ctx = document.getElementById('raCategoryChart').getContext('2d');
-    raChartInstance = new Chart(ctx, {
+    const ctxCat = document.getElementById('raCategoryChart').getContext('2d');
+    raCategoryChartInstance = new Chart(ctxCat, {
         type: 'bar',
         data: {
             labels: catLabels.length > 0 ? catLabels : ['Sem notas 0 no período'],
@@ -565,6 +611,9 @@ function renderRADashboard(periodData) {
         options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } }
     });
 
+    // ==========================================
+    // 3. ATUALIZAR LISTA DE ATENÇÃO
+    // ==========================================
     const divCritical = document.getElementById('raCriticalList');
     let criticalHtml = '';
     
@@ -587,14 +636,12 @@ function renderRADashboard(periodData) {
     divCritical.innerHTML = criticalHtml;
 }
 
-// 2. FUNÇÃO INDEPENDENTE QUE FILTRA E DESENHA SOMENTE A TABELA
 window.updateRATable = function() {
     const tableFilterElement = document.getElementById('raTableFilter');
     const tableFilter = tableFilterElement ? tableFilterElement.value : 'all';
 
     let tableData = currentPeriodData;
 
-    // Aplica a lógica exclusiva da tabela
     if (tableFilter === 'avaliadas') {
         tableData = currentPeriodData.filter(row => row.nota !== '');
     } else if (tableFilter === 'respondidas') {
@@ -632,7 +679,6 @@ window.updateRATable = function() {
         `;
     });
     
-    // Tratativa caso o filtro não encontre nada
     if (tableData.length === 0) {
         tbodyHtml = `<tr><td colspan="8" class="p-6 text-center text-gray-500 font-bold bg-gray-50">Nenhum registro encontrado para este filtro no período.</td></tr>`;
     }
