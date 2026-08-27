@@ -32,7 +32,6 @@ function findKeyByKeywords(obj, keywords) {
     return null;
 }
 
-// Utilitário para DOM
 const $ = (id) => document.getElementById(id);
 
 onAuthStateChanged(auth, (user) => {
@@ -318,12 +317,13 @@ window.generatePDF = function() {
 // =============================================================
 
 let raDataAll = []; 
-let currentVisibleTableData = []; 
+let currentPeriodData = []; // Apenas filtrado por DATA (afeta o Topo)
+let currentVisibleTableData = []; // Filtrado por tudo (afeta Tabela e ERP Base)
 
 // Instâncias de Gráficos RA
 let raScoreChartInstance = null; 
 let raCategoryChartInstance = null;    
-let raTrendChartInstance = null; // NOVO: Evolução Temporal
+let raTrendChartInstance = null; 
 
 // ERP Maps
 let erpDataMap = {}; 
@@ -410,41 +410,27 @@ function processRAData(data) {
     window.filterRADashboard(); 
 }
 
-// A FUNÇÃO PRINCIPAL QUE RODA SEMPRE QUE ALGUÉM FILTRA ALGO
-window.filterRADashboard = function() { updateRATable(); }
-
-// CENTRAL DE ATUALIZAÇÃO DO RA (Filtra, Tabela e Gráficos)
-window.updateRATable = function() {
+// -------------------------------------------------------------
+// SEPARAÇÃO 1: FILTRA POR DATA E ATUALIZA O TOP DASHBOARD GERAL
+// -------------------------------------------------------------
+window.filterRADashboard = function() {
     const startVal = $('raStartDate').value;
     const endVal = $('raEndDate').value;
-    const statFilter = $('raTableFilter') ? $('raTableFilter').value : 'all';
-    const scoFilter = $('raScoreFilter') ? $('raScoreFilter').value : 'all';
-    const catFilter = $('raCategoryFilter') ? $('raCategoryFilter').value : 'all';
-
     let fd = raDataAll;
 
-    // 1. Aplica Datas
     if (startVal) fd = fd.filter(r => r.dataAberturaObj && r.dataAberturaObj >= new Date(startVal + 'T00:00:00'));
     if (endVal) fd = fd.filter(r => r.dataAberturaObj && r.dataAberturaObj <= new Date(endVal + 'T23:59:59'));
 
-    // 2. Aplica Dropdowns
-    if (statFilter === 'avaliadas') fd = fd.filter(r => r.nota !== '');
-    else if (statFilter === 'respondidas') fd = fd.filter(r => r.status.toLowerCase().includes('respondid'));
-    else if (statFilter === 'excluidas') fd = fd.filter(r => r.status.toLowerCase().includes('excluíd') || r.status.toLowerCase().includes('desativada'));
+    currentPeriodData = fd; // Base Master filtrada apenas por Data
+    renderRADashboard(currentPeriodData); // Atualiza os KPIs de Cima
+    updateRATable(); // Cascata para a tabela de baixo
+}
 
-    if (scoFilter !== 'all') fd = fd.filter(r => String(r.nota).trim() === String(scoFilter).trim());
-    if (catFilter !== 'all') fd = fd.filter(r => r.categoria === catFilter);
-
-    currentVisibleTableData = fd;
-
-    // ==========================================
-    // ATUALIZA KPIs E GRÁFICOS DO RA
-    // ==========================================
+function renderRADashboard(periodData) {
     let cResp=0, cAval=0, cReso=0, cExcl=0;
     let catZero={}, scoCounts={}, critItems=[];
-    let monthlyCounts = {}; // NOVO: Pra evolução temporal
 
-    fd.forEach(item => {
+    periodData.forEach(item => {
         const st = item.status.toLowerCase();
         if(st.includes('respondid')) cResp++;
         if(item.nota !== '') { cAval++; scoCounts[item.nota] = (scoCounts[item.nota] || 0) + 1; }
@@ -455,21 +441,12 @@ window.updateRATable = function() {
             catZero[item.categoria] = (catZero[item.categoria] || 0) + 1;
             critItems.push(item);
         }
-
-        // NOVO: Agrupa por Mês/Ano para a Evolução Temporal
-        if(item.dataAberturaObj) {
-            let m = String(item.dataAberturaObj.getMonth() + 1).padStart(2, '0');
-            let y = item.dataAberturaObj.getFullYear();
-            let key = `${y}-${m}`; // YYYY-MM garante ordenação correta
-            monthlyCounts[key] = (monthlyCounts[key] || 0) + 1;
-        }
     });
 
-    $('raKpiAbertas').innerText = fd.length; $('raKpiRespondidas').innerText = cResp;
+    $('raKpiAbertas').innerText = periodData.length; $('raKpiRespondidas').innerText = cResp;
     $('raKpiAvaliadas').innerText = cAval; $('raKpiResolvidas').innerText = cReso;
     $('raKpiExcluidas').innerText = cExcl;
 
-    // Gráfico de Notas
     if(raScoreChartInstance) raScoreChartInstance.destroy();
     const scoreLabels = ['0','1','2','3','4','5','6','7','8','9','10'];
     raScoreChartInstance = new Chart($('raScoreChart').getContext('2d'), {
@@ -478,7 +455,6 @@ window.updateRATable = function() {
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
     });
 
-    // Gráfico Categoria (Zeros)
     if(raCategoryChartInstance) raCategoryChartInstance.destroy();
     const catLabels = Object.keys(catZero);
     raCategoryChartInstance = new Chart($('raCategoryChart').getContext('2d'), {
@@ -487,47 +463,31 @@ window.updateRATable = function() {
         options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
     });
 
-    // Lista Crítica
     $('raCriticalList').innerHTML = critItems.length === 0 ? `<p class="text-green-600 font-bold text-center mt-4">Nenhuma avaliação crítica encontrada! 🎉</p>` : 
     critItems.map(c => `<div class="bg-white p-3 mb-2 rounded border border-red-100 shadow-sm"><div class="flex justify-between mb-1"><span class="font-bold text-xs">ID: ${c.idRA}</span><span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded">Nota: ${c.nota || 'S/N'}</span></div><p class="text-xs text-gray-600 truncate">${c.cliente}</p><p class="text-xs text-gray-500 font-bold mt-1">Motivo: ${c.categoria}</p></div>`).join('');
+}
 
-    // ==========================================
-    // NOVO: GRÁFICO EVOLUÇÃO MENSAL
-    // ==========================================
-    if(raTrendChartInstance) raTrendChartInstance.destroy();
-    
-    const sortedMonths = Object.keys(monthlyCounts).sort();
-    const trendLabels = sortedMonths.map(k => {
-        let [y, m] = k.split('-'); return `${m}/${y}`; // Exibe MM/YYYY
-    });
-    const trendData = sortedMonths.map(k => monthlyCounts[k]);
+// -------------------------------------------------------------
+// SEPARAÇÃO 2: APLICA FILTROS DE INVESTIGAÇÃO NA TABELA E NO ERP
+// -------------------------------------------------------------
+window.updateRATable = function() {
+    const statFilter = $('raTableFilter') ? $('raTableFilter').value : 'all';
+    const scoFilter = $('raScoreFilter') ? $('raScoreFilter').value : 'all';
+    const catFilter = $('raCategoryFilter') ? $('raCategoryFilter').value : 'all';
 
-    raTrendChartInstance = new Chart($('raTrendChart').getContext('2d'), {
-        type: 'line',
-        data: {
-            labels: trendLabels.length ? trendLabels : ['Sem dados'],
-            datasets: [{
-                label: 'Volume de Reclamações',
-                data: trendLabels.length ? trendData : [0],
-                borderColor: '#9333ea', // Roxo RA
-                backgroundColor: 'rgba(147, 51, 234, 0.1)',
-                borderWidth: 3,
-                fill: true,
-                tension: 0.3,
-                pointBackgroundColor: '#9333ea',
-                pointRadius: 4
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-        }
-    });
+    let fd = currentPeriodData; // Puxa os dados apenas da Data
 
-    // ==========================================
-    // ATUALIZA TABELA DETALHADA
-    // ==========================================
+    // Aplica os Dropdowns Investigativos
+    if (statFilter === 'avaliadas') fd = fd.filter(r => r.nota !== '');
+    else if (statFilter === 'respondidas') fd = fd.filter(r => r.status.toLowerCase().includes('respondid'));
+    else if (statFilter === 'excluidas') fd = fd.filter(r => r.status.toLowerCase().includes('excluíd') || r.status.toLowerCase().includes('desativada'));
+
+    if (scoFilter !== 'all') fd = fd.filter(r => String(r.nota).trim() === String(scoFilter).trim());
+    if (catFilter !== 'all') fd = fd.filter(r => r.categoria === catFilter);
+
+    currentVisibleTableData = fd; // Base para o ERP e Análise Temporal
+
+    // Renderiza a Tabela
     const tbody = $('raTableBody');
     if (fd.length === 0) {
         tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-gray-500 font-bold">Nenhum registro encontrado para esta combinação.</td></tr>`;
@@ -548,6 +508,49 @@ window.updateRATable = function() {
                     </tr>`;
         });
         tbody.innerHTML = html;
+    }
+
+    // Calcula a Evolução Mensal APENAS dos dados filtrados na tabela de baixo
+    let monthlyCounts = {};
+    fd.forEach(item => {
+        if(item.dataAberturaObj) {
+            let m = String(item.dataAberturaObj.getMonth() + 1).padStart(2, '0');
+            let y = item.dataAberturaObj.getFullYear();
+            let key = `${y}-${m}`; 
+            monthlyCounts[key] = (monthlyCounts[key] || 0) + 1;
+        }
+    });
+
+    if(raTrendChartInstance) raTrendChartInstance.destroy();
+    
+    const sortedMonths = Object.keys(monthlyCounts).sort();
+    const trendLabels = sortedMonths.map(k => { let [y, m] = k.split('-'); return `${m}/${y}`; });
+    const trendData = sortedMonths.map(k => monthlyCounts[k]);
+
+    const trendCtx = $('raTrendChart') ? $('raTrendChart').getContext('2d') : null;
+    if (trendCtx) {
+        raTrendChartInstance = new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: trendLabels.length ? trendLabels : ['Sem dados'],
+                datasets: [{
+                    label: 'Volume de Ocorrências (Filtrado)',
+                    data: trendLabels.length ? trendData : [0],
+                    borderColor: '#4f46e5', // Indigo do ERP
+                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: '#4f46e5',
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
     }
     
     updateERPDashboard();
