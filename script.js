@@ -21,6 +21,27 @@ const reportsCollection = collection(db, 'relatorios');
 
 let currentModule = 'module-logistica';
 
+// =============================================================
+// =============== FUNÇÕES ÚTEIS E GLOBAIS =====================
+// =============================================================
+
+// CHAVES UNIVERSAIS PARA PROCURAR A COLUNA "PEDIDO" (Funciona para 30h+, RA e ERP)
+const listaChavesPedido = ['pedido', 'idvenda', 'id_venda', 'id venda', 'número do pedido', 'numero do pedido', 'nº pedido'];
+
+// Função universal para achar nome da coluna perdoando letras maiusculas e minúsculas
+function findKeyByKeywords(obj, keywords) {
+    const keys = Object.keys(obj);
+    for (let k of keys) {
+        if (keywords.includes(k)) return k;
+    }
+    for (let k of keys) {
+        for (let kw of keywords) {
+            if (k.includes(kw)) return k;
+        }
+    }
+    return null;
+}
+
 // ================= SISTEMA DE LOGIN E CONTA =================
 onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -182,7 +203,10 @@ function processNewData(data) {
         const rowNormalized = {};
         for(let key in row) { rowNormalized[key.trim().toLowerCase()] = row[key]; }
         
-        const idPedido = rowNormalized['idvenda'] || rowNormalized['pedido'] || '';
+        // USA A BUSCA UNIVERSAL DE PEDIDOS
+        const kPedido = findKeyByKeywords(rowNormalized, listaChavesPedido);
+        const idPedido = kPedido ? rowNormalized[kPedido].toString().trim() : '';
+        
         const statusStr = (rowNormalized['status'] || '').toString().trim().toUpperCase();
         const dataStr = rowNormalized['datahora'] || rowNormalized['data'] || rowNormalized['data do pedido'] || rowNormalized['criado em'] || '-';
         
@@ -375,9 +399,10 @@ let currentVisibleTableData = [];
 let raCategoryChartInstance = null; 
 let raScoreChartInstance = null;    
 
-// NOVA VARIÁVEL GLOBAL PARA OS DADOS DO ERP
+// VARIÁVEL PARA O ERP AGORA ARMAZENA ESTADO E PAGAMENTO
 let erpDataMap = {}; 
 let erpStateChartInstance = null;
+let erpPayChartInstance = null;
 
 function setRADefaultDates() {
     const today = new Date();
@@ -428,19 +453,6 @@ function parseRADateObj(dateStr) {
     }
 }
 
-function findKeyByKeywords(obj, keywords) {
-    const keys = Object.keys(obj);
-    for (let k of keys) {
-        if (keywords.includes(k)) return k;
-    }
-    for (let k of keys) {
-        for (let kw of keywords) {
-            if (k.includes(kw)) return k;
-        }
-    }
-    return null;
-}
-
 window.handleRAFileUpload = function(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -466,7 +478,10 @@ function processRAData(data) {
 
         const kAbertura = findKeyByKeywords(rowNorm, ['entrada', 'data de abertura', 'criado']);
         const kRespondido = findKeyByKeywords(rowNorm, ['data da resposta', 'respondida em']);
-        const kPedido = findKeyByKeywords(rowNorm, ['pedido', 'número do pedido']);
+        
+        // USA A BUSCA UNIVERSAL DE PEDIDOS
+        const kPedido = findKeyByKeywords(rowNorm, listaChavesPedido);
+        
         const kTicket = findKeyByKeywords(rowNorm, ['ticket']);
         const kID = findKeyByKeywords(rowNorm, ['id']);
         const kCliente = findKeyByKeywords(rowNorm, ['cliente', 'nome do consumidor']);
@@ -476,6 +491,7 @@ function processRAData(data) {
 
         const idVal = kID ? rowNorm[kID].toString().trim() : '';
         const ticketVal = kTicket ? rowNorm[kTicket].toString().trim() : '';
+        const pedidoVal = kPedido ? rowNorm[kPedido].toString().trim() : '-';
         
         let finalId = (idVal && idVal !== '-' && idVal.toUpperCase() !== 'NÃO INFORMADO') ? idVal : '-';
         let finalTicket = (ticketVal && ticketVal !== '-' && ticketVal.toUpperCase() !== 'NÃO INFORMADO') ? ticketVal : '-';
@@ -498,7 +514,7 @@ function processRAData(data) {
             abertura: aberturaStr,
             dataAberturaObj: parseRADateObj(aberturaStr), 
             respondido: kRespondido ? rowNorm[kRespondido].toString().trim() : '-',
-            pedido: kPedido ? rowNorm[kPedido].toString().trim() : '-',
+            pedido: pedidoVal,
             ticket: finalTicket, 
             idRA: finalId, 
             cliente: kCliente ? rowNorm[kCliente].toString().trim() : '-',
@@ -710,7 +726,6 @@ window.updateRATable = function() {
 
     tbody.innerHTML = tbodyHtml; 
     
-    // Sempre que a tabela do Reclame Aqui é filtrada, re-calcula o dashboard do ERP (se existir)
     updateERPDashboard();
 }
 
@@ -720,7 +735,6 @@ window.copyRATableData = function() {
         alert("Não há dados na tabela para copiar!");
         return;
     }
-    
     let tsvData = "Data Abertura\tData Resposta\tPedido\tTicket\tID\tCliente\tStatus\tNota\tCategoria\n";
     dataToCopy.forEach(row => {
         let dateAb = row.abertura !== '-' ? row.abertura.toString().split(' ')[0] : '-';
@@ -728,47 +742,28 @@ window.copyRATableData = function() {
         let notaStr = row.nota !== '' ? row.nota : 'N/I';
         tsvData += `${dateAb}\t${dateRe}\t${row.pedido}\t${row.ticket}\t${row.idRA}\t${row.cliente}\t${row.status}\t${notaStr}\t${row.categoria}\n`;
     });
-    
-    navigator.clipboard.writeText(tsvData).then(() => { 
-        alert(`Sucesso! Tabela inteira com ${dataToCopy.length} registros copiada.`); 
-    }).catch(err => {
-        alert("Erro ao copiar os dados.");
-    });
+    navigator.clipboard.writeText(tsvData).then(() => { alert(`Sucesso! Tabela inteira com ${dataToCopy.length} registros copiada.`); });
 }
 
 window.copyRAColumn = function(columnKey) {
     const dataToCopy = currentVisibleTableData || [];
-    
     if(dataToCopy.length === 0) {
-        alert("A tabela está vazia. Não há o que copiar.");
-        return;
+        alert("A tabela está vazia. Não há o que copiar."); return;
     }
-    
     let textToCopy = "";
-    
     dataToCopy.forEach(row => {
         let val = "";
-        if (columnKey === 'abertura') {
-            val = row.abertura !== '-' ? row.abertura.toString().split(' ')[0] : '-';
-        } else if (columnKey === 'respondido') {
-            val = row.respondido !== '-' ? row.respondido.toString().split(' ')[0] : '-';
-        } else if (columnKey === 'nota') {
-            val = row.nota !== '' ? row.nota : 'N/I';
-        } else {
-            val = row[columnKey] !== undefined ? row[columnKey] : '-';
-        }
+        if (columnKey === 'abertura') { val = row.abertura !== '-' ? row.abertura.toString().split(' ')[0] : '-'; }
+        else if (columnKey === 'respondido') { val = row.respondido !== '-' ? row.respondido.toString().split(' ')[0] : '-'; }
+        else if (columnKey === 'nota') { val = row.nota !== '' ? row.nota : 'N/I'; }
+        else { val = row[columnKey] !== undefined ? row[columnKey] : '-'; }
         textToCopy += `${val}\n`;
     });
-    
-    navigator.clipboard.writeText(textToCopy).then(() => { 
-        alert(`Sucesso! Os dados desta coluna (${dataToCopy.length} registros) foram copiados.`); 
-    }).catch(err => {
-        alert("Erro ao copiar os dados da coluna.");
-    });
+    navigator.clipboard.writeText(textToCopy).then(() => { alert(`Sucesso! Os dados desta coluna (${dataToCopy.length} registros) foram copiados.`); });
 }
 
 // =============================================================
-// ================= CRUZAMENTO ERP (NOVO) =====================
+// ================= CRUZAMENTO ERP ============================
 // =============================================================
 
 window.handleERPFileUpload = function(event) {
@@ -788,23 +783,28 @@ window.handleERPFileUpload = function(event) {
 }
 
 function processERPData(data) {
-    erpDataMap = {}; // Reseta o mapa
+    erpDataMap = {}; 
     let foundRows = 0;
 
     data.forEach(row => {
         const rowNorm = {};
         for(let key in row) { rowNorm[key.trim().toLowerCase()] = row[key]; }
 
-        // Procura Coluna Pedido (flexível)
-        const kPedido = findKeyByKeywords(rowNorm, ['pedido', 'id_venda', 'idvenda']);
-        // Procura Coluna Estado (flexível)
+        // BUSCA UNIVERSAL DE PEDIDOS
+        const kPedido = findKeyByKeywords(rowNorm, listaChavesPedido);
         const kEstado = findKeyByKeywords(rowNorm, ['estado', 'uf', 'província']);
+        
+        // NOVA BUSCA: Forma de Pagamento
+        const kPagamento = findKeyByKeywords(rowNorm, ['formapagamento', 'pagamento', 'forma de pagamento']);
 
         if (kPedido && kEstado) {
             const pedido = rowNorm[kPedido].toString().trim();
             const estado = rowNorm[kEstado].toString().trim().toUpperCase();
+            const pagamento = kPagamento ? rowNorm[kPagamento].toString().trim() : 'NÃO ESPECIFICADO';
+            
             if(pedido) {
-                erpDataMap[pedido] = estado;
+                // Guarda um objeto ao invés de apenas uma string
+                erpDataMap[pedido] = { estado: estado, pagamento: pagamento };
                 foundRows++;
             }
         }
@@ -815,90 +815,87 @@ function processERPData(data) {
         return;
     }
 
-    // Libera a interface visual do ERP
     document.getElementById('emptyStateERP').classList.add('hidden');
     document.getElementById('uiAreaERP').classList.remove('hidden');
     document.getElementById('uiAreaERP').classList.add('flex');
 
-    // Manda atualizar os gráficos baseado na tabela que está visível no RA agora
     updateERPDashboard();
 }
 
 function updateERPDashboard() {
-    // Se o mapa estiver vazio, significa que o usuário ainda não subiu o arquivo ERP
     if (Object.keys(erpDataMap).length === 0) return;
 
     let stateCounts = {};
     let stateCategoryCounts = {};
+    let payCounts = {};
 
-    // Baseia-se APENAS nas reclamações que estão passando pelos filtros atuais (currentVisibleTableData)
     currentVisibleTableData.forEach(row => {
         if(row.pedido && row.pedido !== '-') {
-            // Tenta achar o estado no mapa ERP. Se não achar, agrupa como "NÃO ENCONTRADO/OUTROS"
-            let estado = erpDataMap[row.pedido] || 'NÃO ENCONTRADO NO ERP';
             
-            // Soma 1 para o total do Estado
+            let erpData = erpDataMap[row.pedido];
+            let estado = erpData ? erpData.estado : 'NÃO ENCONTRADO NO ERP';
+            let pagamento = erpData ? erpData.pagamento : 'NÃO ENCONTRADO NO ERP';
+            
             stateCounts[estado] = (stateCounts[estado] || 0) + 1;
+            payCounts[pagamento] = (payCounts[pagamento] || 0) + 1;
             
-            // Soma 1 para a Categoria DENTRO do Estado
             if(!stateCategoryCounts[estado]) stateCategoryCounts[estado] = {};
             let cat = row.categoria || 'Sem categoria';
             stateCategoryCounts[estado][cat] = (stateCategoryCounts[estado][cat] || 0) + 1;
         }
     });
 
-    // =========== 1. GRÁFICO (Top 10 Estados) ===========
-    // Ordena do estado com mais reclamação para o com menos
+    // =========== 1. GRÁFICO ESTADO ===========
     const sortedStates = Object.keys(stateCounts).sort((a, b) => stateCounts[b] - stateCounts[a]);
     const chartStates = sortedStates.slice(0, 10);
     const chartData = chartStates.map(st => stateCounts[st]);
 
     if(erpStateChartInstance) erpStateChartInstance.destroy();
-    
-    const ctx = document.getElementById('erpStateChart').getContext('2d');
-    erpStateChartInstance = new Chart(ctx, {
+    const ctxState = document.getElementById('erpStateChart').getContext('2d');
+    erpStateChartInstance = new Chart(ctxState, {
         type: 'bar',
-        data: {
-            labels: chartStates,
-            datasets: [{
-                label: 'Reclamações Filtradas',
-                data: chartData,
-                backgroundColor: '#6366f1', // indigo-500
-                borderRadius: 4
-            }]
-        },
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: false, 
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-        }
+        data: { labels: chartStates, datasets: [{ label: 'Reclamações Filtradas', data: chartData, backgroundColor: '#6366f1', borderRadius: 4 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
     });
 
-    // =========== 2. TABELA (Categorias por Estado) ===========
+    // =========== 2. GRÁFICO PAGAMENTO ===========
+    const payLabels = Object.keys(payCounts);
+    const payData = Object.values(payCounts);
+    
+    if(erpPayChartInstance) erpPayChartInstance.destroy();
+    const ctxPay = document.getElementById('erpPayChart').getContext('2d');
+    
+    erpPayChartInstance = new Chart(ctxPay, {
+        type: 'doughnut',
+        data: {
+            labels: payLabels,
+            datasets: [{
+                data: payData,
+                backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'],
+                borderWidth: 1
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // =========== 3. TABELA ===========
     const tbody = document.getElementById('erpTableBody');
     let html = '';
 
     sortedStates.forEach(st => {
         const cats = stateCategoryCounts[st];
-        // Ordena as categorias dentro daquele estado pelas que mais dão problema
         const sortedCats = Object.keys(cats).sort((a,b) => cats[b] - cats[a]);
         
         sortedCats.forEach(cat => {
-            html += `
-                <tr class="border-b hover:bg-indigo-50 transition">
-                    <td class="p-2 border font-bold text-gray-700 bg-gray-50">${st}</td>
-                    <td class="p-2 border text-gray-600">${cat}</td>
-                    <td class="p-2 border text-center font-bold text-indigo-600">${cats[cat]}</td>
-                </tr>
-            `;
+            html += `<tr class="border-b hover:bg-indigo-50 transition">
+                        <td class="p-2 border font-bold text-gray-700 bg-gray-50">${st}</td>
+                        <td class="p-2 border text-gray-600">${cat}</td>
+                        <td class="p-2 border text-center font-bold text-indigo-600">${cats[cat]}</td>
+                     </tr>`;
         });
     });
 
-    if (sortedStates.length === 0) {
-        html = `<tr><td colspan="3" class="p-6 text-center text-gray-500">Nenhum cruzamento encontrado. Verifique se os pedidos desta filtragem constam no ERP.</td></tr>`;
-    }
-
+    if (sortedStates.length === 0) { html = `<tr><td colspan="3" class="p-6 text-center text-gray-500">Nenhum cruzamento encontrado.</td></tr>`; }
     tbody.innerHTML = html;
 }
 
@@ -906,19 +903,12 @@ window.copyERPTableData = function() {
     const tbody = document.getElementById('erpTableBody');
     const rows = tbody.querySelectorAll('tr');
     
-    if(rows.length === 0 || rows[0].innerText.includes('Nenhum cruzamento')) {
-        alert("Não há dados para copiar."); return;
-    }
+    if(rows.length === 0 || rows[0].innerText.includes('Nenhum cruzamento')) { alert("Não há dados para copiar."); return; }
 
     let tsv = "Estado/UF\tCategoria Ocorrência\tQuantidade\n";
     rows.forEach(tr => {
         const tds = tr.querySelectorAll('td');
-        if(tds.length === 3) {
-            tsv += `${tds[0].innerText}\t${tds[1].innerText}\t${tds[2].innerText}\n`;
-        }
+        if(tds.length === 3) { tsv += `${tds[0].innerText}\t${tds[1].innerText}\t${tds[2].innerText}\n`; }
     });
-
-    navigator.clipboard.writeText(tsv).then(() => { 
-        alert("Tabela de Estados e Categorias copiada com sucesso!"); 
-    });
+    navigator.clipboard.writeText(tsv).then(() => { alert("Tabela de Estados e Categorias copiada com sucesso!"); });
 }

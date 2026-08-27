@@ -20,20 +20,15 @@
     <div id="loginScreen" class="min-h-screen flex items-center justify-center bg-gray-900 absolute inset-0 z-50">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 class="text-2xl font-bold text-center mb-6 text-blue-900">Acesso Restrito</h2>
-            
             <div class="mb-4">
                 <label class="block text-gray-700 text-sm font-bold mb-2">E-mail</label>
                 <input type="email" id="emailInput" class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="seu@email.com">
             </div>
-            
             <div class="mb-6">
                 <label class="block text-gray-700 text-sm font-bold mb-2">Senha</label>
                 <input type="password" id="passwordInput" class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••">
             </div>
-            
-            <button onclick="fazerLogin()" id="btnLogin" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded transition">
-                Entrar
-            </button>
+            <button onclick="fazerLogin()" id="btnLogin" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded transition">Entrar</button>
             <p id="loginError" class="text-red-500 text-sm mt-4 hidden text-center font-bold">Credenciais inválidas.</p>
         </div>
     </div>
@@ -49,26 +44,20 @@
                         <button onclick="switchGlobalModule('module-ra')" id="gnav-ra" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition">🗣️ Reclame Aqui</button>
                     </nav>
                 </div>
-                <div>
-                    <button onclick="fazerLogout()" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded text-sm font-bold shadow transition">Sair</button>
-                </div>
+                <div><button onclick="fazerLogout()" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded text-sm font-bold shadow transition">Sair</button></div>
             </div>
         </div>
     </div>
 
     <!-- =========== MÓDULO 1: LOGÍSTICA (30h+) =========== -->
     <div id="module-logistica" class="main-ui hidden max-w-[1400px] mx-auto p-4 md:p-6">
-        
-        <!-- Cabeçalho Logística -->
         <header class="bg-blue-900 text-white p-6 rounded-t-lg shadow-md flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="text-center md:text-left">
                 <h1 class="text-2xl font-bold">Dashboard - Pedidos Parados (30h+)</h1>
                 <p class="text-sm opacity-80">Gestão Operacional na Nuvem</p>
             </div>
             <div class="flex flex-wrap justify-center gap-4">
-                <button onclick="saveCurrentReport()" id="btnSave" class="hidden bg-yellow-500 hover:bg-yellow-400 text-blue-900 px-4 py-2 rounded font-bold shadow transition">
-                    💾 Salvar no Firebase
-                </button>
+                <button onclick="saveCurrentReport()" id="btnSave" class="hidden bg-yellow-500 hover:bg-yellow-400 text-blue-900 px-4 py-2 rounded font-bold shadow transition">💾 Salvar no Firebase</button>
                 <label class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded cursor-pointer transition font-semibold flex items-center justify-center shadow-lg">
                     <span>📁 Nova Análise Logística</span>
                     <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleFileUpload(event)">
@@ -76,14 +65,12 @@
             </div>
         </header>
 
-        <!-- Navegação Interna Logística -->
         <div class="bg-white shadow-md rounded-b-lg mb-6 flex border-b border-gray-200">
             <button onclick="switchTab('tab-analise')" id="nav-analise" class="tab-btn active flex-1 py-4 text-center text-gray-600 hover:text-blue-800">📊 Visão Atual</button>
             <button onclick="switchTab('tab-historico')" id="nav-historico" class="tab-btn flex-1 py-4 text-center text-gray-600 hover:text-blue-800">🗂️ Histórico (Nuvem)</button>
             <button onclick="switchTab('tab-conta')" id="nav-conta" class="tab-btn flex-1 py-4 text-center text-gray-600 hover:text-blue-800">👤 Minha Conta</button>
         </div>
 
-        <!-- Conteúdo Logística -->
         <div>
             <!-- ABA 1: ANÁLISE -->
             <div id="tab-analise" class="flex flex-col gap-6">
@@ -91,12 +78,10 @@
                     <span class="text-4xl mb-4 block">📈</span>
                     <p class="text-lg">Carregue uma planilha logística ou selecione um relatório do histórico para visualizar os dados.</p>
                 </div>
-
                 <div id="uiArea" class="hidden flex-col gap-6">
                     <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded text-blue-800 flex justify-between items-center">
                         <p id="currentReportLabel" class="font-semibold">Relatório em exibição: Análise não salva.</p>
                     </div>
-
                     <div class="bg-gray-900 p-6 rounded-lg shadow-xl overflow-x-auto">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-xl font-bold text-white">Resumo de Status</h2>
@@ -106,13 +91,10 @@
                             </div>
                         </div>
                         <table class="w-full dark-table border-collapse text-sm" id="mainTable">
-                            <thead>
-                                <tr><th>Status</th><th>Setor Responsável</th><th>QTD</th></tr>
-                            </thead>
+                            <thead><tr><th>Status</th><th>Setor Responsável</th><th>QTD</th></tr></thead>
                             <tbody id="tableBody"></tbody>
                         </table>
                     </div>
-
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="bg-white p-6 rounded-lg shadow-md border border-gray-300">
                             <h3 class="text-lg font-bold mb-4 text-center text-gray-700">Volume por Setor</h3>
@@ -123,11 +105,7 @@
                             <div class="relative h-64 w-full"><canvas id="statusChart"></canvas></div>
                         </div>
                     </div>
-
-                    <div class="flex">
-                        <button onclick="generatePDF()" class="w-full bg-red-600 hover:bg-red-700 text-white px-6 py-4 rounded font-bold transition shadow-lg text-lg">📄 Baixar Relatório PDF (Executivo)</button>
-                    </div>
-
+                    <div class="flex"><button onclick="generatePDF()" class="w-full bg-red-600 hover:bg-red-700 text-white px-6 py-4 rounded font-bold transition shadow-lg text-lg">📄 Baixar Relatório PDF (Executivo)</button></div>
                     <div id="sectorDetailsContainer" class="flex flex-col gap-6 w-full mt-2"></div>
                 </div>
             </div>
@@ -141,14 +119,8 @@
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full border-collapse">
-                            <thead>
-                                <tr class="bg-gray-100 text-gray-700">
-                                    <th class="p-3 border text-left">Data do Relatório</th><th class="p-3 border text-center">Total</th><th class="p-3 border text-left">Criado por</th><th class="p-3 border text-center">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="historyTableBody">
-                                <tr><td colspan="4" class="p-4 text-center">Carregando dados da nuvem...</td></tr>
-                            </tbody>
+                            <thead><tr class="bg-gray-100 text-gray-700"><th class="p-3 border text-left">Data do Relatório</th><th class="p-3 border text-center">Total</th><th class="p-3 border text-left">Criado por</th><th class="p-3 border text-center">Ações</th></tr></thead>
+                            <tbody id="historyTableBody"><tr><td colspan="4" class="p-4 text-center">Carregando dados da nuvem...</td></tr></tbody>
                         </table>
                     </div>
                 </div>
@@ -171,7 +143,6 @@
     <!-- =========== MÓDULO 2: RECLAME AQUI =========== -->
     <div id="module-ra" class="main-ui hidden max-w-[1400px] mx-auto p-4 md:p-6">
         
-        <!-- Cabeçalho RA -->
         <header class="bg-purple-900 text-white p-6 rounded-lg shadow-md flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
             <div class="text-center md:text-left">
                 <h1 class="text-2xl font-bold">Dashboard - Reclame Aqui</h1>
@@ -185,16 +156,13 @@
             </div>
         </header>
 
-        <!-- Estado Vazio RA -->
         <div id="emptyStateRA" class="bg-white p-12 text-center rounded-lg shadow-md text-gray-500">
             <span class="text-4xl mb-4 block">🗣️</span>
             <p class="text-lg">Carregue a planilha de histórico do Reclame Aqui para visualizar os relatórios.</p>
         </div>
 
-        <!-- Área de Dados RA -->
         <div id="uiAreaRA" class="hidden flex-col gap-6">
             
-            <!-- Controle de Datas -->
             <div class="bg-white p-5 rounded-lg shadow-md flex flex-col lg:flex-row justify-between items-center gap-4 border-l-4 border-purple-500">
                 <div class="font-bold text-gray-700 text-lg">Filtre por Período de Abertura:</div>
                 <div class="flex flex-wrap items-center justify-center gap-4">
@@ -211,7 +179,6 @@
                 </div>
             </div>
 
-            <!-- KPIs Semanais -->
             <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div class="bg-white p-4 rounded-lg shadow border-b-4 border-blue-500 text-center">
                     <p class="text-sm text-gray-500 font-bold uppercase">Abertas</p>
@@ -235,31 +202,23 @@
                 </div>
             </div>
 
-            <!-- Gráfico e Alertas -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- GRÁFICO 1: Distribuição das Notas -->
                 <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
                     <h3 class="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Distribuição de Notas (0 a 10)</h3>
                     <div class="relative h-72 w-full"><canvas id="raScoreChart"></canvas></div>
                 </div>
-
-                <!-- GRÁFICO 2: Categorias Críticas -->
                 <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
                     <h3 class="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Críticas (Nota 0 / Não Resolvido)</h3>
                     <div class="relative h-72 w-full"><canvas id="raCategoryChart"></canvas></div>
                 </div>
-                
-                <!-- ALERTAS: Detratores -->
                 <div class="bg-red-50 p-6 rounded-lg shadow-md border border-red-200 flex flex-col">
                     <h3 class="text-lg font-bold mb-4 text-red-800 border-b border-red-200 pb-2">Atenção Crítica 🚨</h3>
-                    <p class="text-sm text-red-700 mb-4">Reclamações do período que receberam nota zero ou foram categorizadas como não resolvidas.</p>
-                    <div class="overflow-y-auto flex-grow max-h-56 pr-2" id="raCriticalList">
-                        <!-- Preenchido via JS -->
-                    </div>
+                    <p class="text-sm text-red-700 mb-4">Reclamações do período com nota zero ou não resolvidas.</p>
+                    <div class="overflow-y-auto flex-grow max-h-56 pr-2" id="raCriticalList"></div>
                 </div>
             </div>
 
-            <!-- Tabela Detalhada RA COM NOVOS FILTROS -->
+            <!-- Tabela Detalhada RA -->
             <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
                 <div class="flex flex-col lg:flex-row justify-between items-center mb-4 border-b pb-3 gap-4">
                     <h3 class="text-lg font-bold text-gray-800">Detalhamento do Período Filtrado</h3>
@@ -267,29 +226,25 @@
                     <div class="flex flex-wrap items-center justify-end gap-3">
                         <select id="raScoreFilter" onchange="updateRATable()" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-2 shadow-sm font-semibold outline-none cursor-pointer">
                             <option value="all">Filtro: Todas as Notas</option>
-                            <option value="10">Filtro: Apenas Nota 10</option>
-                            <option value="9">Filtro: Apenas Nota 9</option>
-                            <option value="8">Filtro: Apenas Nota 8</option>
-                            <option value="7">Filtro: Apenas Nota 7</option>
-                            <option value="6">Filtro: Apenas Nota 6</option>
-                            <option value="5">Filtro: Apenas Nota 5</option>
-                            <option value="4">Filtro: Apenas Nota 4</option>
-                            <option value="3">Filtro: Apenas Nota 3</option>
-                            <option value="2">Filtro: Apenas Nota 2</option>
-                            <option value="1">Filtro: Apenas Nota 1</option>
-                            <option value="0">Filtro: Apenas Nota 0</option>
+                            <option value="10">Filtro: Nota 10</option>
+                            <option value="9">Filtro: Nota 9</option>
+                            <option value="8">Filtro: Nota 8</option>
+                            <option value="7">Filtro: Nota 7</option>
+                            <option value="6">Filtro: Nota 6</option>
+                            <option value="5">Filtro: Nota 5</option>
+                            <option value="4">Filtro: Nota 4</option>
+                            <option value="3">Filtro: Nota 3</option>
+                            <option value="2">Filtro: Nota 2</option>
+                            <option value="1">Filtro: Nota 1</option>
+                            <option value="0">Filtro: Nota 0</option>
                         </select>
-
                         <select id="raTableFilter" onchange="updateRATable()" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-2 shadow-sm font-semibold outline-none cursor-pointer">
                             <option value="all">Status: Todas as Reclamações</option>
                             <option value="avaliadas">Status: Apenas Avaliadas</option>
                             <option value="respondidas">Status: Apenas Respondidas</option>
                             <option value="excluidas">Status: Apenas Excluídas</option>
                         </select>
-
-                        <button onclick="copyRATableData()" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow transition flex items-center gap-2">
-                            📋 Copiar Tudo
-                        </button>
+                        <button onclick="copyRATableData()" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow transition flex items-center gap-2">📋 Copiar Tudo</button>
                     </div>
                 </div>
                 
@@ -297,101 +252,77 @@
                     <table class="w-full border-collapse text-sm">
                         <thead class="sticky top-0 bg-gray-100 shadow-sm z-10">
                             <tr class="text-gray-700">
-                                <th class="p-3 border text-left font-bold whitespace-nowrap">
-                                    <div class="flex items-center gap-2">Data Abertura <button onclick="copyRAColumn('abertura')" class="text-gray-400 hover:text-blue-600 transition" title="Copiar só a data de abertura">📋</button></div>
-                                </th>
-                                <th class="p-3 border text-left font-bold whitespace-nowrap">
-                                    <div class="flex items-center gap-2">Data Resposta <button onclick="copyRAColumn('respondido')" class="text-gray-400 hover:text-blue-600 transition" title="Copiar só a data de resposta">📋</button></div>
-                                </th>
-                                <th class="p-3 border text-left font-bold">
-                                    <div class="flex items-center gap-2">Pedido <button onclick="copyRAColumn('pedido')" class="text-gray-400 hover:text-blue-600 transition" title="Copiar só a lista de pedidos">📋</button></div>
-                                </th>
-                                <th class="p-3 border text-left font-bold">
-                                    <div class="flex items-center gap-2">Ticket <button onclick="copyRAColumn('ticket')" class="text-gray-400 hover:text-blue-600 transition" title="Copiar só a lista de tickets">📋</button></div>
-                                </th>
-                                <th class="p-3 border text-left font-bold">
-                                    <div class="flex items-center gap-2">ID <button onclick="copyRAColumn('idRA')" class="text-gray-400 hover:text-blue-600 transition" title="Copiar só os IDs">📋</button></div>
-                                </th>
-                                <th class="p-3 border text-left font-bold">
-                                    <div class="flex items-center gap-2">Cliente <button onclick="copyRAColumn('cliente')" class="text-gray-400 hover:text-blue-600 transition" title="Copiar só a lista de clientes">📋</button></div>
-                                </th>
-                                <th class="p-3 border text-left font-bold">
-                                    <div class="flex items-center gap-2">Status <button onclick="copyRAColumn('status')" class="text-gray-400 hover:text-blue-600 transition" title="Copiar coluna de status">📋</button></div>
-                                </th>
-                                <th class="p-3 border text-center font-bold">
-                                    <div class="flex items-center justify-center gap-2">Nota <button onclick="copyRAColumn('nota')" class="text-gray-400 hover:text-blue-600 transition" title="Copiar coluna de notas">📋</button></div>
-                                </th>
-                                <th class="p-3 border text-left font-bold">
-                                    <div class="flex items-center gap-2">Categoria <button onclick="copyRAColumn('categoria')" class="text-gray-400 hover:text-blue-600 transition" title="Copiar coluna de categorias">📋</button></div>
-                                </th>
+                                <th class="p-3 border text-left font-bold whitespace-nowrap"><div class="flex items-center gap-2">Data Abertura <button onclick="copyRAColumn('abertura')" class="text-gray-400 hover:text-blue-600 transition" title="Copiar só a data de abertura">📋</button></div></th>
+                                <th class="p-3 border text-left font-bold whitespace-nowrap"><div class="flex items-center gap-2">Data Resposta <button onclick="copyRAColumn('respondido')" class="text-gray-400 hover:text-blue-600 transition" title="Copiar só a data de resposta">📋</button></div></th>
+                                <th class="p-3 border text-left font-bold"><div class="flex items-center gap-2">Pedido <button onclick="copyRAColumn('pedido')" class="text-gray-400 hover:text-blue-600 transition" title="Copiar só a lista de pedidos">📋</button></div></th>
+                                <th class="p-3 border text-left font-bold"><div class="flex items-center gap-2">Ticket <button onclick="copyRAColumn('ticket')" class="text-gray-400 hover:text-blue-600 transition" title="Copiar só a lista de tickets">📋</button></div></th>
+                                <th class="p-3 border text-left font-bold"><div class="flex items-center gap-2">ID <button onclick="copyRAColumn('idRA')" class="text-gray-400 hover:text-blue-600 transition" title="Copiar só os IDs">📋</button></div></th>
+                                <th class="p-3 border text-left font-bold"><div class="flex items-center gap-2">Cliente <button onclick="copyRAColumn('cliente')" class="text-gray-400 hover:text-blue-600 transition" title="Copiar só a lista de clientes">📋</button></div></th>
+                                <th class="p-3 border text-left font-bold"><div class="flex items-center gap-2">Status <button onclick="copyRAColumn('status')" class="text-gray-400 hover:text-blue-600 transition" title="Copiar coluna de status">📋</button></div></th>
+                                <th class="p-3 border text-center font-bold"><div class="flex items-center justify-center gap-2">Nota <button onclick="copyRAColumn('nota')" class="text-gray-400 hover:text-blue-600 transition" title="Copiar coluna de notas">📋</button></div></th>
+                                <th class="p-3 border text-left font-bold"><div class="flex items-center gap-2">Categoria <button onclick="copyRAColumn('categoria')" class="text-gray-400 hover:text-blue-600 transition" title="Copiar coluna de categorias">📋</button></div></th>
                             </tr>
                         </thead>
-                        <tbody id="raTableBody">
-                            <!-- Preenchido via JS -->
-                        </tbody>
+                        <tbody id="raTableBody"></tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- ========================================================================= -->
-            <!-- =========== NOVA ÁREA: CRUZAMENTO COM ERP (ESTADO/CIDADE) =============== -->
-            <!-- ========================================================================= -->
+            <!-- ================= CRUZAMENTO COM ERP ================= -->
             <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200 mt-4 border-l-4 border-indigo-500">
                 <div class="flex flex-col lg:flex-row justify-between items-center mb-4 border-b pb-3 gap-4">
                     <div>
-                        <h3 class="text-lg font-bold text-gray-800">Análise Geográfica Avançada</h3>
-                        <p class="text-sm text-gray-500">Cruze as reclamações filtradas acima com a sua planilha de ERP para encontrar a origem (Estado).</p>
+                        <h3 class="text-lg font-bold text-gray-800">Análise Cruzada ERP (Estado & Pagamento)</h3>
+                        <p class="text-sm text-gray-500">Cruze as reclamações com a planilha de ERP para encontrar origem e forma de pagamento.</p>
                     </div>
-                    
                     <label class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg cursor-pointer transition font-bold shadow-md flex items-center gap-2">
                         <span>📁 Planilha do Sistema (ERP)</span>
                         <input type="file" id="fileInputERP" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleERPFileUpload(event)">
                     </label>
                 </div>
 
-                <!-- Estado Vazio do ERP -->
                 <div id="emptyStateERP" class="p-8 text-center text-gray-500 bg-gray-50 rounded border border-dashed border-gray-300">
-                    <span class="text-4xl mb-3 block">🗺️</span>
+                    <span class="text-4xl mb-3 block">🗺️💳</span>
                     <p class="font-semibold text-gray-600">Aguardando arquivo do ERP...</p>
-                    <p class="text-sm mt-2">A planilha precisa conter as colunas de "Pedido" e "Estado" para que o sistema faça o vínculo automático.</p>
+                    <p class="text-sm mt-2">O sistema vai parear automaticamente buscando a coluna "Pedido" (ou idvenda).</p>
                 </div>
 
-                <!-- Dashboard ERP (Aparece após o upload) -->
                 <div id="uiAreaERP" class="hidden flex-col gap-6 mt-4">
+                    <!-- Grid dos Gráficos -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <!-- Gráfico de Estados -->
                         <div class="border border-gray-200 rounded p-4 shadow-sm bg-white">
                             <h4 class="font-bold text-gray-700 mb-4 text-center border-b pb-2">Volume por Estado (Top 10)</h4>
                             <div class="relative h-64 w-full"><canvas id="erpStateChart"></canvas></div>
                         </div>
-                        
-                        <!-- Tabela Cruzada: Estado x Categoria -->
-                        <div class="border border-gray-200 rounded p-4 shadow-sm bg-white flex flex-col">
-                            <div class="flex justify-between items-center mb-2 border-b pb-2">
-                                <h4 class="font-bold text-gray-700">Detalhamento por Estado e Motivo</h4>
-                                <button onclick="copyERPTableData()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 px-3 py-1 rounded text-xs font-bold transition flex items-center gap-1">
-                                    📋 Copiar Tabela
-                                </button>
-                            </div>
-                            <div class="overflow-auto flex-grow max-h-64 pr-2">
-                                <table class="w-full text-sm text-left border-collapse">
-                                    <thead class="bg-gray-100 sticky top-0 shadow-sm">
-                                        <tr>
-                                            <th class="p-2 border font-bold text-gray-700">Estado / UF</th>
-                                            <th class="p-2 border font-bold text-gray-700">Categoria Ocorrência</th>
-                                            <th class="p-2 border font-bold text-gray-700 text-center">Qtd</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="erpTableBody">
-                                        <!-- Preenchido via JS -->
-                                    </tbody>
-                                </table>
-                            </div>
+                        <div class="border border-gray-200 rounded p-4 shadow-sm bg-white">
+                            <h4 class="font-bold text-gray-700 mb-4 text-center border-b pb-2">Reclamações por Forma de Pagamento</h4>
+                            <div class="relative h-64 w-full"><canvas id="erpPayChart"></canvas></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tabela Cruzada -->
+                    <div class="border border-gray-200 rounded p-4 shadow-sm bg-white flex flex-col">
+                        <div class="flex justify-between items-center mb-2 border-b pb-2">
+                            <h4 class="font-bold text-gray-700">Detalhamento por Estado e Motivo</h4>
+                            <button onclick="copyERPTableData()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 px-3 py-1 rounded text-xs font-bold transition flex items-center gap-1">
+                                📋 Copiar Tabela
+                            </button>
+                        </div>
+                        <div class="overflow-auto max-h-64 pr-2">
+                            <table class="w-full text-sm text-left border-collapse">
+                                <thead class="bg-gray-100 sticky top-0 shadow-sm">
+                                    <tr>
+                                        <th class="p-2 border font-bold text-gray-700">Estado / UF</th>
+                                        <th class="p-2 border font-bold text-gray-700">Categoria Ocorrência</th>
+                                        <th class="p-2 border font-bold text-gray-700 text-center">Qtd</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="erpTableBody"></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
             </div>
-            <!-- ======================= FIM NOVA ÁREA ================================= -->
 
         </div>
     </div>
@@ -412,7 +343,7 @@
         </div>
     </div>
 
-    <!-- Arquivo JS Externo -->
-    <script type="module" src="script.js"></script>
+    <!-- ARQUIVO JS (Completamente atualizado para versão sem cache) -->
+    <script type="module" src="script.js?v=3"></script>
 </body>
 </html>
