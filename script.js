@@ -19,128 +19,93 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const reportsCollection = collection(db, 'relatorios');
 
-let currentModule = 'module-logistica';
-
 // =============================================================
-// =============== FUNÇÕES ÚTEIS E GLOBAIS =====================
+// =============== UTILS & CORE SYSTEM =========================
 // =============================================================
 
 const listaChavesPedido = ['pedido', 'idvenda', 'id_venda', 'id venda', 'número do pedido', 'numero do pedido', 'nº pedido'];
 
 function findKeyByKeywords(obj, keywords) {
     const keys = Object.keys(obj);
-    for (let k of keys) {
-        if (keywords.includes(k)) return k;
-    }
-    for (let k of keys) {
-        for (let kw of keywords) {
-            if (k.includes(kw)) return k;
-        }
-    }
+    for (let k of keys) if (keywords.includes(k)) return k;
+    for (let k of keys) for (let kw of keywords) if (k.includes(kw)) return k;
     return null;
 }
 
-// ================= SISTEMA DE LOGIN E CONTA =================
+// Utilitário para DOM
+const $ = (id) => document.getElementById(id);
+
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        document.getElementById('loginScreen').classList.add('hidden');
-        document.getElementById('top-nav').classList.remove('hidden');
+        $('loginScreen').classList.add('hidden');
+        $('top-nav').classList.remove('hidden');
         switchGlobalModule('module-logistica');
     } else {
-        document.getElementById('loginScreen').classList.remove('hidden');
-        document.getElementById('top-nav').classList.add('hidden');
-        document.getElementById('module-logistica').classList.add('hidden');
-        document.getElementById('module-ra').classList.add('hidden');
+        $('loginScreen').classList.remove('hidden');
+        $('top-nav').classList.add('hidden');
+        $('module-logistica').classList.add('hidden');
+        $('module-ra').classList.add('hidden');
     }
 });
 
 window.fazerLogin = async function() {
-    const email = document.getElementById('emailInput').value;
-    const pass = document.getElementById('passwordInput').value;
-    const btn = document.getElementById('btnLogin');
+    const email = $('emailInput').value;
+    const pass = $('passwordInput').value;
+    const btn = $('btnLogin');
     if(!email || !pass) return;
     btn.innerText = "Verificando...";
-    document.getElementById('loginError').classList.add('hidden');
+    $('loginError').classList.add('hidden');
     try { await signInWithEmailAndPassword(auth, email, pass); } 
-    catch (error) { document.getElementById('loginError').classList.remove('hidden'); } 
+    catch (error) { $('loginError').classList.remove('hidden'); } 
     finally { btn.innerText = "Entrar"; }
 }
 
 window.fazerLogout = function() {
-    signOut(auth).then(() => {
-        document.getElementById('emailInput').value = '';
-        document.getElementById('passwordInput').value = '';
-    });
+    signOut(auth).then(() => { $('emailInput').value = ''; $('passwordInput').value = ''; });
 }
 
 window.alterarSenha = async function() {
-    const newPass = document.getElementById('newPasswordInput').value;
-    const confirmPass = document.getElementById('confirmPasswordInput').value;
-    const msg = document.getElementById('passwordMsg');
+    const newPass = $('newPasswordInput').value;
+    const confirmPass = $('confirmPasswordInput').value;
+    const msg = $('passwordMsg');
     msg.classList.remove('hidden', 'text-red-600', 'text-green-600');
-    if (!newPass || newPass.length < 6) {
-        msg.innerText = "A senha deve ter pelo menos 6 caracteres.";
-        msg.classList.add('text-red-600'); return;
-    }
-    if (newPass !== confirmPass) {
-        msg.innerText = "As senhas não coincidem.";
-        msg.classList.add('text-red-600'); return;
-    }
-    const user = auth.currentUser;
-    if (user) {
+    
+    if (!newPass || newPass.length < 6) { msg.innerText = "Mínimo 6 caracteres."; msg.classList.add('text-red-600'); return; }
+    if (newPass !== confirmPass) { msg.innerText = "Senhas não coincidem."; msg.classList.add('text-red-600'); return; }
+    
+    if (auth.currentUser) {
         try {
-            await updatePassword(user, newPass);
-            msg.innerText = "Senha alterada com sucesso!";
-            msg.classList.add('text-green-600');
-            document.getElementById('newPasswordInput').value = '';
-            document.getElementById('confirmPasswordInput').value = '';
+            await updatePassword(auth.currentUser, newPass);
+            msg.innerText = "Senha alterada!"; msg.classList.add('text-green-600');
+            $('newPasswordInput').value = ''; $('confirmPasswordInput').value = '';
         } catch (error) {
-            msg.innerText = "Erro ao alterar. Saia e entre novamente na conta por segurança.";
-            msg.classList.add('text-red-600');
+            msg.innerText = "Erro ao alterar. Saia e entre novamente."; msg.classList.add('text-red-600');
         }
     }
 }
 
-// ================= CONTROLE NAVEGAÇÃO GLOBAL =================
 window.switchGlobalModule = function(moduleId) {
-    currentModule = moduleId;
-    
-    document.getElementById('module-logistica').classList.add('hidden');
-    document.getElementById('module-ra').classList.add('hidden');
-    
-    const btnLog = document.getElementById('gnav-logistica');
-    const btnRa = document.getElementById('gnav-ra');
-    
-    btnLog.className = "px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition";
-    btnRa.className = "px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition";
+    $('module-logistica').classList.add('hidden');
+    $('module-ra').classList.add('hidden');
+    $('gnav-logistica').className = "px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition";
+    $('gnav-ra').className = "px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition";
 
-    document.getElementById(moduleId).classList.remove('hidden');
-    
-    if(moduleId === 'module-logistica') {
-        btnLog.className = "px-3 py-2 rounded-md text-sm font-medium bg-gray-800 text-white transition shadow";
-    } else {
-        btnRa.className = "px-3 py-2 rounded-md text-sm font-medium bg-gray-800 text-white transition shadow";
-    }
+    $(moduleId).classList.remove('hidden');
+    const activeBtn = moduleId === 'module-logistica' ? $('gnav-logistica') : $('gnav-ra');
+    activeBtn.className = "px-3 py-2 rounded-md text-sm font-medium bg-gray-800 text-white transition shadow";
 }
-
 
 // =============================================================
 // ================= MÓDULO 1: LOGÍSTICA (30h+) ================
 // =============================================================
 
 const tableConfig = [
-    { status: 'FATURADO (SC)', setor: 'ESTOQUE SC' },
-    { status: 'EM SEPARAÇÃO (SC)', setor: 'ESTOQUE SC' },
-    { status: 'AGUARDANDO COLETA (SC)', setor: 'ESTOQUE SC' },
-    { status: 'VERIFICADO (SC)', setor: 'ESTOQUE SC' },
-    { status: 'HD BRASIL ESTÁ MONTANDO SUA MÁQUINA (SC)', setor: 'ESTOQUE SC' },
-    { status: 'PAGAMENTO APROVADO (SC)', setor: 'ESTOQUE SC' },
-    { status: 'EM PROCESSAMENTO (SC)', setor: 'ESTOQUE SC' },
-    { status: 'PENDENTE TROCA (SC)', setor: 'ESTOQUE SC' },
-    { status: 'AGUARDANDO REVISÃO (SC)', setor: 'ATENDIMENTO' },
-    { status: 'RETIDO (SC)', setor: 'ATENDIMENTO' },
-    { status: 'AGUARDANDO DISPONIBILIDADE (SC)', setor: 'ATENDIMENTO' },
-    { status: 'INCOMPATÍVEL (SC)', setor: 'ATENDIMENTO' },
+    { status: 'FATURADO (SC)', setor: 'ESTOQUE SC' }, { status: 'EM SEPARAÇÃO (SC)', setor: 'ESTOQUE SC' },
+    { status: 'AGUARDANDO COLETA (SC)', setor: 'ESTOQUE SC' }, { status: 'VERIFICADO (SC)', setor: 'ESTOQUE SC' },
+    { status: 'HD BRASIL ESTÁ MONTANDO SUA MÁQUINA (SC)', setor: 'ESTOQUE SC' }, { status: 'PAGAMENTO APROVADO (SC)', setor: 'ESTOQUE SC' },
+    { status: 'EM PROCESSAMENTO (SC)', setor: 'ESTOQUE SC' }, { status: 'PENDENTE TROCA (SC)', setor: 'ESTOQUE SC' },
+    { status: 'AGUARDANDO REVISÃO (SC)', setor: 'ATENDIMENTO' }, { status: 'RETIDO (SC)', setor: 'ATENDIMENTO' },
+    { status: 'AGUARDANDO DISPONIBILIDADE (SC)', setor: 'ATENDIMENTO' }, { status: 'INCOMPATÍVEL (SC)', setor: 'ATENDIMENTO' },
     { status: 'PENDENTE REEMBOLSO (SC)', setor: 'ATENDIMENTO' }
 ];
 
@@ -148,34 +113,20 @@ let currentCounts = {};
 let sectorOrders = {}; 
 let chartInstanceSector = null;
 let chartInstanceStatus = null;
-let activeReportId = null; 
 let historyCache = []; 
 let currentTeamMessage = ""; 
 
 function initCounts() {
-    tableConfig.forEach(item => {
-        currentCounts[item.status] = 0;
-        sectorOrders[item.setor] = [];
-    });
+    tableConfig.forEach(item => { currentCounts[item.status] = 0; sectorOrders[item.setor] = []; });
 }
 initCounts();
 
 window.switchTab = function(tabId) {
-    document.getElementById('tab-analise').classList.add('hidden');
-    document.getElementById('tab-historico').classList.add('hidden');
-    document.getElementById('tab-conta').classList.add('hidden');
-    document.getElementById(tabId).classList.remove('hidden');
-
-    document.getElementById('nav-analise').classList.remove('active');
-    document.getElementById('nav-historico').classList.remove('active');
-    document.getElementById('nav-conta').classList.remove('active');
-    
-    if(tabId === 'tab-analise') document.getElementById('nav-analise').classList.add('active');
-    if(tabId === 'tab-historico') {
-        document.getElementById('nav-historico').classList.add('active');
-        fetchHistoryFromFirebase();
-    }
-    if(tabId === 'tab-conta') document.getElementById('nav-conta').classList.add('active');
+    ['tab-analise', 'tab-historico', 'tab-conta'].forEach(id => $(id).classList.add('hidden'));
+    ['nav-analise', 'nav-historico', 'nav-conta'].forEach(id => $(id).classList.remove('active'));
+    $(tabId).classList.remove('hidden');
+    $('nav-' + tabId.split('-')[1]).classList.add('active');
+    if(tabId === 'tab-historico') fetchHistoryFromFirebase();
 }
 
 window.handleFileUpload = function(event) {
@@ -195,20 +146,15 @@ window.handleFileUpload = function(event) {
 
 function processNewData(data) {
     initCounts();
-    activeReportId = null; 
-
     data.forEach(row => {
-        const rowNormalized = {};
-        for(let key in row) { rowNormalized[key.trim().toLowerCase()] = row[key]; }
+        const rowNorm = {}; for(let key in row) rowNorm[key.trim().toLowerCase()] = row[key];
         
-        const kPedido = findKeyByKeywords(rowNormalized, listaChavesPedido);
-        const idPedido = kPedido ? rowNormalized[kPedido].toString().trim() : '';
-        
-        const statusStr = (rowNormalized['status'] || '').toString().trim().toUpperCase();
-        const dataStr = rowNormalized['datahora'] || rowNormalized['data'] || rowNormalized['data do pedido'] || rowNormalized['criado em'] || '-';
+        const kPedido = findKeyByKeywords(rowNorm, listaChavesPedido);
+        const idPedido = kPedido ? rowNorm[kPedido].toString().trim() : '';
+        const statusStr = (rowNorm['status'] || '').toString().trim().toUpperCase();
+        const dataStr = rowNorm['datahora'] || rowNorm['data'] || rowNorm['data do pedido'] || rowNorm['criado em'] || '-';
         
         if(!idPedido && statusStr === '') return;
-
         for (let config of tableConfig) {
             if (statusStr.includes(config.status) || config.status.includes(statusStr)) {
                 currentCounts[config.status]++;
@@ -218,172 +164,153 @@ function processNewData(data) {
         }
     });
 
-    document.getElementById('currentReportLabel').innerText = "Relatório em exibição: Nova análise (Não salva na nuvem)";
-    document.getElementById('btnSave').classList.remove('hidden');
-    updateDashboard();
+    $('currentReportLabel').innerText = "Relatório em exibição: Nova análise (Não salva na nuvem)";
+    $('btnSave').classList.remove('hidden');
+    updateLogisticaDashboard();
     window.switchTab('tab-analise');
 }
 
-function updateDashboard() {
-    document.getElementById('emptyState').classList.add('hidden');
-    document.getElementById('uiArea').classList.remove('hidden');
-    document.getElementById('uiArea').classList.add('flex');
-    renderTable();
+function updateLogisticaDashboard() {
+    $('emptyState').classList.add('hidden');
+    $('uiArea').classList.remove('hidden');
+    $('uiArea').classList.add('flex');
+    renderLogisticaTable();
     generateTextForTeam(); 
-    renderCharts();
+    renderLogisticaCharts();
     renderSectorDetails(); 
 }
 
-function renderTable() {
-    const tbody = document.getElementById('tableBody');
+function renderLogisticaTable() {
+    const tbody = $('tableBody');
     tbody.innerHTML = '';
     tableConfig.forEach(config => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${config.status}</td><td>${config.setor}</td><td class="font-bold text-lg">${currentCounts[config.status]}</td>`;
-        tbody.appendChild(tr);
+        tbody.innerHTML += `<tr><td>${config.status}</td><td>${config.setor}</td><td class="font-bold text-lg">${currentCounts[config.status]}</td></tr>`;
     });
 }
 
 function generateTextForTeam() {
-    const now = new Date();
-    const hora = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     let texto = `Bom dia meus consagrados!\n\nSegue relação de 30+ para avaliação, retirado as ${hora}, podem ter ocorrido atualizações!\n\nEstoque SC @Mario Tobal Se precisar de uma mão só avisar!\n\n`;
-    tableConfig.forEach(config => { if (config.setor === 'ESTOQUE SC' && currentCounts[config.status] > 0) texto += `${config.status}    ${currentCounts[config.status]}\n`; });
-    texto += `\nATENDIMENTO - Já em validação, quebras bem controladas, e validando casos de pendente reembolso e retido para a finalização.\n\n`;
-    tableConfig.forEach(config => { if (config.setor === 'ATENDIMENTO' && currentCounts[config.status] > 0) texto += `${config.status}    ${currentCounts[config.status]}\n`; });
+    tableConfig.forEach(c => { if (c.setor === 'ESTOQUE SC' && currentCounts[c.status] > 0) texto += `${c.status}    ${currentCounts[c.status]}\n`; });
+    texto += `\nATENDIMENTO - Já em validação...\n\n`;
+    tableConfig.forEach(c => { if (c.setor === 'ATENDIMENTO' && currentCounts[c.status] > 0) texto += `${c.status}    ${currentCounts[c.status]}\n`; });
     texto += `\nSegue planilha para acompanhamento:\nRELATÓRIO 30+`;
     currentTeamMessage = texto;
 }
 
 window.copyText = function() {
     navigator.clipboard.writeText(currentTeamMessage).then(() => {
-        const msg = document.getElementById('copyMsg');
-        if(msg) { msg.classList.remove('hidden'); setTimeout(() => msg.classList.add('hidden'), 3000); }
+        $('copyMsg').classList.remove('hidden'); setTimeout(() => $('copyMsg').classList.add('hidden'), 3000);
     });
 }
 
-function renderCharts() {
+function renderLogisticaCharts() {
     if (chartInstanceSector) chartInstanceSector.destroy();
     if (chartInstanceStatus) chartInstanceStatus.destroy();
 
     let scTotal = 0, atTotal = 0;
-    tableConfig.forEach(c => {
-        if(c.setor === 'ESTOQUE SC') scTotal += currentCounts[c.status];
-        if(c.setor === 'ATENDIMENTO') atTotal += currentCounts[c.status];
-    });
+    tableConfig.forEach(c => { c.setor === 'ESTOQUE SC' ? scTotal += currentCounts[c.status] : atTotal += currentCounts[c.status]; });
 
-    const ctxSector = document.getElementById('sectorChart').getContext('2d');
-    chartInstanceSector = new Chart(ctxSector, { type: 'doughnut', data: { labels: ['Estoque SC', 'Atendimento'], datasets: [{ data: [scTotal, atTotal], backgroundColor: ['#2563eb', '#16a34a'], borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false } });
+    chartInstanceSector = new Chart($('sectorChart').getContext('2d'), { 
+        type: 'doughnut', 
+        data: { labels: ['Estoque SC', 'Atendimento'], datasets: [{ data: [scTotal, atTotal], backgroundColor: ['#2563eb', '#16a34a'] }] }, 
+        options: { responsive: true, maintainAspectRatio: false } 
+    });
 
     const statusLabels = [], statusData = [];
-    tableConfig.forEach(c => {
-        if (currentCounts[c.status] > 0) { statusLabels.push(c.status.replace(' (SC)', '')); statusData.push(currentCounts[c.status]); }
-    });
+    tableConfig.forEach(c => { if (currentCounts[c.status] > 0) { statusLabels.push(c.status.replace(' (SC)', '')); statusData.push(currentCounts[c.status]); }});
 
-    const ctxStatus = document.getElementById('statusChart').getContext('2d');
-    chartInstanceStatus = new Chart(ctxStatus, { type: 'bar', data: { labels: statusLabels, datasets: [{ label: 'Qtd de Pedidos', data: statusData, backgroundColor: '#f59e0b', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } } });
+    chartInstanceStatus = new Chart($('statusChart').getContext('2d'), { 
+        type: 'bar', 
+        data: { labels: statusLabels, datasets: [{ label: 'Qtd de Pedidos', data: statusData, backgroundColor: '#f59e0b', borderRadius: 4 }] }, 
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } } 
+    });
 }
 
 function renderSectorDetails() {
-    const container = document.getElementById('sectorDetailsContainer');
-    container.innerHTML = ''; 
-    const distinctSectors = [...new Set(tableConfig.map(c => c.setor))];
-    distinctSectors.forEach(setor => {
+    const container = $('sectorDetailsContainer'); container.innerHTML = ''; 
+    [...new Set(tableConfig.map(c => c.setor))].forEach(setor => {
         const orders = sectorOrders[setor] || [];
         if (orders.length === 0) return; 
-        const section = document.createElement('div');
-        section.className = 'bg-white p-6 rounded-lg shadow-md border border-gray-300 flex flex-col mt-4';
+        
         let rowsHtml = '';
-        orders.forEach(o => { rowsHtml += `<tr class="border-b hover:bg-gray-50"><td class="p-3 border text-gray-700">${o.data}</td><td class="p-3 border font-mono text-blue-800 font-bold">${o.pedido}</td><td class="p-3 border text-gray-700 text-xs">${o.status}</td></tr>`; });
-        section.innerHTML = `<div class="flex flex-col sm:flex-row justify-between items-center mb-4 border-b pb-3 gap-3"><h3 class="text-xl font-bold text-gray-800">Detalhamento: ${setor}</h3><button onclick="copySectorData('${setor}')" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm font-bold shadow transition flex items-center gap-2">📋 Copiar Dados para Planilha (${orders.length})</button></div><div class="overflow-x-auto max-h-96 overflow-y-auto"><table class="w-full border-collapse text-sm"><thead class="sticky top-0 bg-gray-200 shadow-sm z-10"><tr class="text-gray-700"><th class="p-3 border text-left font-bold">Data</th><th class="p-3 border text-left font-bold">Pedido</th><th class="p-3 border text-left font-bold">Status Exato</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
-        container.appendChild(section);
+        orders.forEach(o => rowsHtml += `<tr class="border-b hover:bg-gray-50"><td class="p-3 border">${o.data}</td><td class="p-3 border font-mono font-bold">${o.pedido}</td><td class="p-3 border text-xs">${o.status}</td></tr>`);
+        
+        container.innerHTML += `
+            <div class="bg-white p-6 rounded-lg shadow-md border border-gray-300 mt-4">
+                <div class="flex justify-between items-center mb-4 border-b pb-3">
+                    <h3 class="text-xl font-bold">Detalhamento: ${setor}</h3>
+                    <button onclick="copySectorData('${setor}')" class="bg-gray-800 text-white px-4 py-2 rounded text-sm font-bold">📋 Copiar (${orders.length})</button>
+                </div>
+                <div class="overflow-x-auto max-h-96"><table class="w-full text-sm">
+                <thead class="bg-gray-200 sticky top-0"><tr><th class="p-3 text-left">Data</th><th class="p-3 text-left">Pedido</th><th class="p-3 text-left">Status</th></tr></thead>
+                <tbody>${rowsHtml}</tbody></table></div>
+            </div>`;
     });
 }
 
 window.copySectorData = function(setor) {
     const orders = sectorOrders[setor] || [];
-    if(orders.length === 0) return;
     let tsvData = "Data\tPedido\tStatus\n";
-    orders.forEach(o => { tsvData += `${o.data}\t${o.pedido}\t${o.status}\n`; });
-    navigator.clipboard.writeText(tsvData).then(() => { alert(`Dados dos pedidos de ${setor} copiados!`); });
+    orders.forEach(o => tsvData += `${o.data}\t${o.pedido}\t${o.status}\n`);
+    navigator.clipboard.writeText(tsvData).then(() => alert(`Copiado!`));
 }
 
 window.saveCurrentReport = async function() {
-    let total = 0; tableConfig.forEach(c => total += currentCounts[c.status]);
-    const reportData = { timestamp: new Date().getTime(), dateLabel: new Date().toLocaleString('pt-BR'), total: total, createdBy: auth.currentUser ? auth.currentUser.email : "Desconhecido", counts: { ...currentCounts }, orders: sectorOrders };
-    const btn = document.getElementById('btnSave'); btn.innerText = "Salvando..."; btn.disabled = true;
+    let total = Object.values(currentCounts).reduce((a,b)=>a+b,0);
+    const reportData = { timestamp: new Date().getTime(), dateLabel: new Date().toLocaleString('pt-BR'), total: total, createdBy: auth.currentUser ? auth.currentUser.email : "Desconhecido", counts: currentCounts, orders: sectorOrders };
+    $('btnSave').innerText = "Salvando..."; $('btnSave').disabled = true;
     try {
-        const docRef = await addDoc(reportsCollection, reportData);
-        alert("Salvo com sucesso!");
-        btn.classList.add('hidden'); document.getElementById('currentReportLabel').innerText = `Salvo em ${reportData.dateLabel}`; activeReportId = docRef.id;
-    } catch (e) { alert("Erro ao salvar."); } finally { btn.innerText = "💾 Salvar no Firebase"; btn.disabled = false; }
+        await addDoc(reportsCollection, reportData);
+        alert("Salvo!"); $('btnSave').classList.add('hidden'); $('currentReportLabel').innerText = `Salvo em ${reportData.dateLabel}`;
+    } catch (e) { alert("Erro ao salvar."); } finally { $('btnSave').innerText = "💾 Salvar no Firebase"; $('btnSave').disabled = false; }
 }
 
 async function fetchHistoryFromFirebase() {
     try {
-        const q = query(reportsCollection, orderBy("timestamp", "desc"));
-        const querySnapshot = await getDocs(q);
-        historyCache = [];
-        querySnapshot.forEach((doc) => { historyCache.push({ id: doc.id, ...doc.data() }); });
+        const querySnapshot = await getDocs(query(reportsCollection, orderBy("timestamp", "desc")));
+        historyCache = []; querySnapshot.forEach(doc => historyCache.push({ id: doc.id, ...doc.data() }));
         renderHistoryTable();
-    } catch (e) { document.getElementById('historyTableBody').innerHTML = '<tr><td colspan="4">Erro na busca.</td></tr>'; }
+    } catch (e) { $('historyTableBody').innerHTML = '<tr><td colspan="4">Erro na busca.</td></tr>'; }
 }
 
 function renderHistoryTable() {
-    const tbody = document.getElementById('historyTableBody');
-    tbody.innerHTML = '';
+    const tbody = $('historyTableBody'); tbody.innerHTML = '';
     if(historyCache.length === 0) { tbody.innerHTML = `<tr><td colspan="4" class="text-center">Vazio.</td></tr>`; return; }
     historyCache.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td class="p-3">${item.dateLabel}</td><td class="p-3 text-center">${item.total}</td><td class="p-3">${item.createdBy || 'Sistema'}</td><td class="p-3 text-center"><button onclick="loadReport('${item.id}')" class="bg-blue-600 text-white px-3 py-1 rounded">Visualizar</button> <button onclick="deleteReport('${item.id}')" class="bg-red-500 text-white px-3 py-1 rounded">Excluir</button></td>`;
-        tbody.appendChild(tr);
+        tbody.innerHTML += `<tr><td class="p-3">${item.dateLabel}</td><td class="p-3 text-center">${item.total}</td><td class="p-3">${item.createdBy}</td><td class="p-3 text-center"><button onclick="loadReport('${item.id}')" class="bg-blue-600 text-white px-3 py-1 rounded">Visualizar</button> <button onclick="deleteReport('${item.id}')" class="bg-red-500 text-white px-3 py-1 rounded">Excluir</button></td></tr>`;
     });
 }
 
 window.loadReport = function(id) {
     const report = historyCache.find(r => r.id === id);
     if(report) {
-        currentCounts = { ...report.counts };
-        sectorOrders = report.orders ? report.orders : (initCounts(), { ...report.counts }); 
-        activeReportId = report.id;
-        document.getElementById('currentReportLabel').innerText = `Histórico: ${report.dateLabel}`;
-        document.getElementById('btnSave').classList.add('hidden'); 
-        updateDashboard(); window.switchTab('tab-analise');
+        currentCounts = report.counts; sectorOrders = report.orders || {}; 
+        $('currentReportLabel').innerText = `Histórico: ${report.dateLabel}`;
+        $('btnSave').classList.add('hidden'); 
+        updateLogisticaDashboard(); window.switchTab('tab-analise');
     }
 }
 
 window.deleteReport = async function(id) {
     if(confirm(`Tem certeza que deseja excluir?`)) {
-        try {
-            await deleteDoc(doc(db, "relatorios", id));
-            historyCache = historyCache.filter(r => r.id !== id);
-            if(activeReportId === id) { document.getElementById('uiArea').classList.add('hidden'); document.getElementById('emptyState').classList.remove('hidden'); activeReportId = null; }
-            renderHistoryTable();
-        } catch(e) { alert("Erro ao excluir."); }
+        await deleteDoc(doc(db, "relatorios", id)); fetchHistoryFromFirebase();
     }
 }
 
-function generateAnalysis() {
-    let total = 0, scTotal = 0, atTotal = 0;
-    tableConfig.forEach(c => {
-        total += currentCounts[c.status];
-        if (c.setor === 'ESTOQUE SC') scTotal += currentCounts[c.status];
-        if (c.setor === 'ATENDIMENTO') atTotal += currentCounts[c.status];
-    });
-    const analysisContainer = document.getElementById('executiveAnalysis');
-    if (total === 0) { analysisContainer.innerHTML = `<p>Sem atrasos.</p>`; return; }
-    analysisContainer.innerHTML = `<p>O cenário atual reporta um acumulado de <strong>${total} pedidos</strong> com tempo de permanência superior a 30 horas.</p>`;
-}
-
 window.generatePDF = function() {
-    window.scrollTo(0, 0); generateAnalysis();
-    const pdfTable = document.getElementById('pdfTable');
+    window.scrollTo(0, 0); 
+    const total = Object.values(currentCounts).reduce((a,b)=>a+b,0);
+    $('executiveAnalysis').innerHTML = `<p>O cenário atual reporta um acumulado de <strong>${total} pedidos</strong> com tempo de permanência superior a 30 horas.</p>`;
+    
     let tableHTML = `<thead><tr><th>Status</th><th>Setor Responsável</th><th>QTD</th></tr></thead><tbody>`;
-    tableConfig.forEach(config => { tableHTML += `<tr><td>${config.status}</td><td>${config.setor}</td><td style="font-weight: bold;">${currentCounts[config.status]}</td></tr>`; });
-    tableHTML += `</tbody>`; pdfTable.innerHTML = tableHTML;
-    document.getElementById('pdfDate').innerText = `Documento referente a: ${new Date().toLocaleString()}`;
+    tableConfig.forEach(c => tableHTML += `<tr><td>${c.status}</td><td>${c.setor}</td><td style="font-weight: bold;">${currentCounts[c.status]}</td></tr>`);
+    $('pdfTable').innerHTML = tableHTML + `</tbody>`;
+    $('pdfDate').innerText = `Documento referente a: ${new Date().toLocaleString()}`;
+    
     document.body.classList.add('is-printing');
-    html2pdf().set({ margin: 15, filename: `Analise.pdf`, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(document.getElementById('pdfContent')).save().then(() => { document.body.classList.remove('is-printing'); });
+    html2pdf().set({ margin: 15, filename: `Analise.pdf`, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } })
+    .from($('pdfContent')).save().then(() => document.body.classList.remove('is-printing'));
 }
 
 // =============================================================
@@ -391,532 +318,339 @@ window.generatePDF = function() {
 // =============================================================
 
 let raDataAll = []; 
-let currentPeriodData = []; 
 let currentVisibleTableData = []; 
-let raCategoryChartInstance = null; 
-let raScoreChartInstance = null;    
 
-// VARIÁVEIS ERP
+// Instâncias de Gráficos RA
+let raScoreChartInstance = null; 
+let raCategoryChartInstance = null;    
+let raTrendChartInstance = null; // NOVO: Evolução Temporal
+
+// ERP Maps
 let erpDataMap = {}; 
 let erpStateChartInstance = null;
 let erpPayChartInstance = null;
 
 function setRADefaultDates() {
     const today = new Date();
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(today.getDate() - 7);
-
-    const formatDateLocal = (date) => {
-        let month = '' + (date.getMonth() + 1);
-        let day = '' + date.getDate();
-        const year = date.getFullYear();
-
-        if (month.length < 2) month = '0' + month;
-        if (day.length < 2) day = '0' + day;
-
-        return [year, month, day].join('-');
-    };
-
-    const inputStart = document.getElementById('raStartDate');
-    const inputEnd = document.getElementById('raEndDate');
+    const sevenAgo = new Date(); sevenAgo.setDate(today.getDate() - 7);
+    const format = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     
-    if (inputStart && inputEnd) {
-        inputStart.value = formatDateLocal(sevenDaysAgo);
-        inputEnd.value = formatDateLocal(today);
+    if ($('raStartDate') && $('raEndDate')) {
+        $('raStartDate').value = format(sevenAgo);
+        $('raEndDate').value = format(today);
     }
 }
-
 setRADefaultDates();
 
 function parseRADateObj(dateStr) {
     if(!dateStr || dateStr === '-' || dateStr === '' || dateStr.toString().toUpperCase() === 'NÃO INFORMADO') return null;
     try {
-        const datePart = dateStr.toString().split(' ')[0];
-        const parts = datePart.split(/[\/\-]/); 
-        
-        let dateObj;
-        if(parts[0].length === 4) { 
-            dateObj = new Date(parts[0], parseInt(parts[1])-1, parts[2]); 
-        } else if (parts.length === 3) { 
-            dateObj = new Date(parts[2], parseInt(parts[1])-1, parts[0]); 
-        } else {
-            return null;
-        }
-        
-        if(isNaN(dateObj.getTime())) return null;
-        return dateObj;
-    } catch(e) {
-        return null;
-    }
+        const parts = dateStr.toString().split(' ')[0].split(/[\/\-]/); 
+        const dateObj = parts[0].length === 4 ? new Date(parts[0], parts[1]-1, parts[2]) : new Date(parts[2], parts[1]-1, parts[0]);
+        return isNaN(dateObj.getTime()) ? null : dateObj;
+    } catch(e) { return null; }
 }
 
 window.handleRAFileUpload = function(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
+    const file = event.target.files[0]; if (!file) return;
     const reader = new FileReader();
-    reader.onload = function(e) {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, {type: 'array'});
-        const sheetName = workbook.SheetNames[0];
-        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "", raw: false, dateNF: 'dd/mm/yyyy' });
-        processRAData(jsonData);
+    reader.onload = e => {
+        const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+        processRAData(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "", raw: false, dateNF: 'dd/mm/yyyy' }));
     };
-    reader.readAsArrayBuffer(file);
-    event.target.value = ''; 
+    reader.readAsArrayBuffer(file); event.target.value = ''; 
 }
 
 function processRAData(data) {
     raDataAll = [];
 
     data.forEach(row => {
-        const rowNorm = {};
-        for(let key in row) { rowNorm[key.trim().toLowerCase()] = row[key]; }
+        const rN = {}; for(let key in row) rN[key.trim().toLowerCase()] = row[key];
 
-        const kAbertura = findKeyByKeywords(rowNorm, ['entrada', 'data de abertura', 'criado']);
-        const kRespondido = findKeyByKeywords(rowNorm, ['data da resposta', 'respondida em']);
-        const kPedido = findKeyByKeywords(rowNorm, listaChavesPedido);
-        const kTicket = findKeyByKeywords(rowNorm, ['ticket']);
-        const kID = findKeyByKeywords(rowNorm, ['id']);
-        const kCliente = findKeyByKeywords(rowNorm, ['cliente', 'nome do consumidor']);
-        const kStatus = findKeyByKeywords(rowNorm, ['situação', 'status']);
-        const kNota = findKeyByKeywords(rowNorm, ['nota', 'avaliação']);
-        const kCategoria = findKeyByKeywords(rowNorm, ['categoria', 'motivo', 'assunto']);
+        const kAbertura = findKeyByKeywords(rN, ['entrada', 'data de abertura', 'criado']);
+        const kRespondido = findKeyByKeywords(rN, ['data da resposta', 'respondida em']);
+        const kPedido = findKeyByKeywords(rN, listaChavesPedido);
+        const kTicket = findKeyByKeywords(rN, ['ticket']);
+        const kID = findKeyByKeywords(rN, ['id']);
+        const kCliente = findKeyByKeywords(rN, ['cliente', 'nome do consumidor']);
+        const kStatus = findKeyByKeywords(rN, ['situação', 'status']);
+        const kNota = findKeyByKeywords(rN, ['nota', 'avaliação']);
+        const kCategoria = findKeyByKeywords(rN, ['categoria', 'motivo', 'assunto']);
 
-        const idVal = kID ? rowNorm[kID].toString().trim() : '';
-        const ticketVal = kTicket ? rowNorm[kTicket].toString().trim() : '';
-        const pedidoVal = kPedido ? rowNorm[kPedido].toString().trim() : '-';
-        
-        let finalId = (idVal && idVal !== '-' && idVal.toUpperCase() !== 'NÃO INFORMADO') ? idVal : '-';
-        let finalTicket = (ticketVal && ticketVal !== '-' && ticketVal.toUpperCase() !== 'NÃO INFORMADO') ? ticketVal : '-';
+        let notaVal = kNota ? rN[kNota].toString().trim().toUpperCase() : '';
+        if (['NÃO INFORMADO', 'NAN', '-', '', 'N/I', 'N/A', 'NULL'].includes(notaVal)) notaVal = '';
+        else notaVal = isNaN(parseInt(notaVal)) ? '' : parseInt(notaVal).toString();
 
-        let notaVal = kNota ? rowNorm[kNota].toString().trim().toUpperCase() : '';
-        if (['NÃO INFORMADO', 'NAO INFORMADO', 'NAN', '-', '', 'N/I', 'N/A', 'NULL'].includes(notaVal)) {
-            notaVal = '';
-        } else {
-            const parsedNota = parseInt(notaVal);
-            if (!isNaN(parsedNota)) {
-                notaVal = parsedNota.toString();
-            } else {
-                notaVal = '';
-            }
-        }
-
-        const aberturaStr = kAbertura ? rowNorm[kAbertura].toString().trim() : '-';
-        const categoriaFinal = kCategoria ? rowNorm[kCategoria].toString().trim() : 'Não categorizado';
-
-        const record = {
-            abertura: aberturaStr,
-            dataAberturaObj: parseRADateObj(aberturaStr), 
-            respondido: kRespondido ? rowNorm[kRespondido].toString().trim() : '-',
-            pedido: pedidoVal,
-            ticket: finalTicket, 
-            idRA: finalId, 
-            cliente: kCliente ? rowNorm[kCliente].toString().trim() : '-',
-            status: kStatus ? rowNorm[kStatus].toString().trim() : 'Sem Status',
+        raDataAll.push({
+            abertura: kAbertura ? rN[kAbertura].toString().trim() : '-',
+            dataAberturaObj: parseRADateObj(kAbertura ? rN[kAbertura].toString() : ''), 
+            respondido: kRespondido ? rN[kRespondido].toString().trim() : '-',
+            pedido: kPedido ? rN[kPedido].toString().trim() : '-',
+            ticket: kTicket ? rN[kTicket].toString().trim() : '-', 
+            idRA: kID ? rN[kID].toString().trim() : '-', 
+            cliente: kCliente ? rN[kCliente].toString().trim() : '-',
+            status: kStatus ? rN[kStatus].toString().trim() : 'Sem Status',
             nota: notaVal,
-            categoria: categoriaFinal
-        };
-
-        raDataAll.push(record);
+            categoria: kCategoria ? rN[kCategoria].toString().trim() : 'Não categorizado'
+        });
     });
 
-    // === POPULA O MENU DINÂMICO DE CATEGORIAS ===
-    const categoryFilterElement = document.getElementById('raCategoryFilter');
-    if (categoryFilterElement) {
-        let uniqueCats = [...new Set(raDataAll.map(item => item.categoria))].filter(c => c !== '').sort();
+    const categorySelect = $('raCategoryFilter');
+    if (categorySelect) {
+        let uniqueCats = [...new Set(raDataAll.map(i => i.categoria))].filter(c => c !== '').sort();
         let catHtml = '<option value="all">Filtro: Todos os Motivos</option>';
-        uniqueCats.forEach(c => {
-            catHtml += `<option value="${c}">${c}</option>`;
-        });
-        categoryFilterElement.innerHTML = catHtml;
+        uniqueCats.forEach(c => catHtml += `<option value="${c}">${c}</option>`);
+        categorySelect.innerHTML = catHtml;
     }
 
     setRADefaultDates();
-    
-    document.getElementById('emptyStateRA').classList.add('hidden');
-    document.getElementById('uiAreaRA').classList.remove('hidden');
-    document.getElementById('uiAreaRA').classList.add('flex');
-
+    $('emptyStateRA').classList.add('hidden');
+    $('uiAreaRA').classList.remove('hidden');
+    $('uiAreaRA').classList.add('flex');
     window.filterRADashboard(); 
 }
 
-window.filterRADashboard = function() {
-    const startVal = document.getElementById('raStartDate').value;
-    const endVal = document.getElementById('raEndDate').value;
+// A FUNÇÃO PRINCIPAL QUE RODA SEMPRE QUE ALGUÉM FILTRA ALGO
+window.filterRADashboard = function() { updateRATable(); }
 
-    let filteredData = raDataAll;
+// CENTRAL DE ATUALIZAÇÃO DO RA (Filtra, Tabela e Gráficos)
+window.updateRATable = function() {
+    const startVal = $('raStartDate').value;
+    const endVal = $('raEndDate').value;
+    const statFilter = $('raTableFilter') ? $('raTableFilter').value : 'all';
+    const scoFilter = $('raScoreFilter') ? $('raScoreFilter').value : 'all';
+    const catFilter = $('raCategoryFilter') ? $('raCategoryFilter').value : 'all';
 
-    if (startVal) {
-        const startDate = new Date(startVal + 'T00:00:00');
-        filteredData = filteredData.filter(r => r.dataAberturaObj && r.dataAberturaObj >= startDate);
-    }
-    
-    if (endVal) {
-        const endDate = new Date(endVal + 'T23:59:59');
-        filteredData = filteredData.filter(r => r.dataAberturaObj && r.dataAberturaObj <= endDate);
-    }
+    let fd = raDataAll;
 
-    currentPeriodData = filteredData; 
-    renderRADashboard(filteredData);  
-    window.updateRATable();           
-}
+    // 1. Aplica Datas
+    if (startVal) fd = fd.filter(r => r.dataAberturaObj && r.dataAberturaObj >= new Date(startVal + 'T00:00:00'));
+    if (endVal) fd = fd.filter(r => r.dataAberturaObj && r.dataAberturaObj <= new Date(endVal + 'T23:59:59'));
 
-function renderRADashboard(periodData) {
-    let cAbertas = periodData.length;
-    let cRespondidas = 0;
-    let cAvaliadas = 0;
-    let cResolvidas = 0;
-    let cExcluidas = 0;
-    
-    let categoriasNotaZero = {};
-    let scoreCounts = {}; 
-    let criticalItems = []; 
+    // 2. Aplica Dropdowns
+    if (statFilter === 'avaliadas') fd = fd.filter(r => r.nota !== '');
+    else if (statFilter === 'respondidas') fd = fd.filter(r => r.status.toLowerCase().includes('respondid'));
+    else if (statFilter === 'excluidas') fd = fd.filter(r => r.status.toLowerCase().includes('excluíd') || r.status.toLowerCase().includes('desativada'));
 
-    periodData.forEach(item => {
+    if (scoFilter !== 'all') fd = fd.filter(r => String(r.nota).trim() === String(scoFilter).trim());
+    if (catFilter !== 'all') fd = fd.filter(r => r.categoria === catFilter);
+
+    currentVisibleTableData = fd;
+
+    // ==========================================
+    // ATUALIZA KPIs E GRÁFICOS DO RA
+    // ==========================================
+    let cResp=0, cAval=0, cReso=0, cExcl=0;
+    let catZero={}, scoCounts={}, critItems=[];
+    let monthlyCounts = {}; // NOVO: Pra evolução temporal
+
+    fd.forEach(item => {
         const st = item.status.toLowerCase();
-        
-        if(st.includes('respondid')) cRespondidas++;
-        
-        if(item.nota !== '') {
-            cAvaliadas++;
-            scoreCounts[item.nota] = (scoreCounts[item.nota] || 0) + 1;
-        }
-        
-        if(st.includes('resolvid')) cResolvidas++;
-        if(st.includes('excluíd') || st.includes('desativada')) cExcluidas++;
+        if(st.includes('respondid')) cResp++;
+        if(item.nota !== '') { cAval++; scoCounts[item.nota] = (scoCounts[item.nota] || 0) + 1; }
+        if(st.includes('resolvid')) cReso++;
+        if(st.includes('excluíd') || st.includes('desativada')) cExcl++;
 
         if(item.nota === '0' || st.includes('não resolvid')) {
-            const cat = item.categoria;
-            categoriasNotaZero[cat] = (categoriasNotaZero[cat] || 0) + 1;
-            criticalItems.push(item);
+            catZero[item.categoria] = (catZero[item.categoria] || 0) + 1;
+            critItems.push(item);
+        }
+
+        // NOVO: Agrupa por Mês/Ano para a Evolução Temporal
+        if(item.dataAberturaObj) {
+            let m = String(item.dataAberturaObj.getMonth() + 1).padStart(2, '0');
+            let y = item.dataAberturaObj.getFullYear();
+            let key = `${y}-${m}`; // YYYY-MM garante ordenação correta
+            monthlyCounts[key] = (monthlyCounts[key] || 0) + 1;
         }
     });
 
-    document.getElementById('raKpiAbertas').innerText = cAbertas;
-    document.getElementById('raKpiRespondidas').innerText = cRespondidas;
-    document.getElementById('raKpiAvaliadas').innerText = cAvaliadas;
-    document.getElementById('raKpiResolvidas').innerText = cResolvidas;
-    document.getElementById('raKpiExcluidas').innerText = cExcluidas;
+    $('raKpiAbertas').innerText = fd.length; $('raKpiRespondidas').innerText = cResp;
+    $('raKpiAvaliadas').innerText = cAval; $('raKpiResolvidas').innerText = cReso;
+    $('raKpiExcluidas').innerText = cExcl;
 
+    // Gráfico de Notas
     if(raScoreChartInstance) raScoreChartInstance.destroy();
-    
-    const scoreLabels = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
-    const scoreData = scoreLabels.map(lbl => scoreCounts[lbl] || 0);
-    
-    const scoreColors = scoreLabels.map(lbl => {
-        const nota = parseInt(lbl);
-        if (nota <= 3) return '#ef4444'; 
-        if (nota <= 6) return '#eab308'; 
-        return '#22c55e'; 
-    });
-
-    const ctxScore = document.getElementById('raScoreChart').getContext('2d');
-    raScoreChartInstance = new Chart(ctxScore, {
+    const scoreLabels = ['0','1','2','3','4','5','6','7','8','9','10'];
+    raScoreChartInstance = new Chart($('raScoreChart').getContext('2d'), {
         type: 'bar',
-        data: {
-            labels: scoreLabels,
-            datasets: [{ label: 'Qtd Reclamações', data: scoreData, backgroundColor: scoreColors, borderRadius: 4 }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+        data: { labels: scoreLabels, datasets: [{ data: scoreLabels.map(l => scoCounts[l] || 0), backgroundColor: scoreLabels.map(l=>parseInt(l)<=3?'#ef4444':parseInt(l)<=6?'#eab308':'#22c55e'), borderRadius: 4 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
     });
 
+    // Gráfico Categoria (Zeros)
     if(raCategoryChartInstance) raCategoryChartInstance.destroy();
-    
-    const catLabels = Object.keys(categoriasNotaZero);
-    const catData = Object.values(categoriasNotaZero);
-    
-    const ctxCat = document.getElementById('raCategoryChart').getContext('2d');
-    raCategoryChartInstance = new Chart(ctxCat, {
+    const catLabels = Object.keys(catZero);
+    raCategoryChartInstance = new Chart($('raCategoryChart').getContext('2d'), {
         type: 'bar',
+        data: { labels: catLabels.length ? catLabels : ['Sem notas 0'], datasets: [{ data: catLabels.length ? Object.values(catZero) : [0], backgroundColor: '#ef4444', borderRadius: 4 }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+
+    // Lista Crítica
+    $('raCriticalList').innerHTML = critItems.length === 0 ? `<p class="text-green-600 font-bold text-center mt-4">Nenhuma avaliação crítica encontrada! 🎉</p>` : 
+    critItems.map(c => `<div class="bg-white p-3 mb-2 rounded border border-red-100 shadow-sm"><div class="flex justify-between mb-1"><span class="font-bold text-xs">ID: ${c.idRA}</span><span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded">Nota: ${c.nota || 'S/N'}</span></div><p class="text-xs text-gray-600 truncate">${c.cliente}</p><p class="text-xs text-gray-500 font-bold mt-1">Motivo: ${c.categoria}</p></div>`).join('');
+
+    // ==========================================
+    // NOVO: GRÁFICO EVOLUÇÃO MENSAL
+    // ==========================================
+    if(raTrendChartInstance) raTrendChartInstance.destroy();
+    
+    const sortedMonths = Object.keys(monthlyCounts).sort();
+    const trendLabels = sortedMonths.map(k => {
+        let [y, m] = k.split('-'); return `${m}/${y}`; // Exibe MM/YYYY
+    });
+    const trendData = sortedMonths.map(k => monthlyCounts[k]);
+
+    raTrendChartInstance = new Chart($('raTrendChart').getContext('2d'), {
+        type: 'line',
         data: {
-            labels: catLabels.length > 0 ? catLabels : ['Sem notas 0 no período'],
-            datasets: [{ label: 'Qtd Detratores', data: catData.length > 0 ? catData : [0], backgroundColor: '#ef4444', borderRadius: 4 }]
+            labels: trendLabels.length ? trendLabels : ['Sem dados'],
+            datasets: [{
+                label: 'Volume de Reclamações',
+                data: trendLabels.length ? trendData : [0],
+                borderColor: '#9333ea', // Roxo RA
+                backgroundColor: 'rgba(147, 51, 234, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.3,
+                pointBackgroundColor: '#9333ea',
+                pointRadius: 4
+            }]
         },
-        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-    });
-
-    const divCritical = document.getElementById('raCriticalList');
-    let criticalHtml = '';
-    
-    if(criticalItems.length === 0) {
-        criticalHtml = `<p class="text-green-600 font-bold text-center mt-4">Nenhuma avaliação crítica encontrada no período! 🎉</p>`;
-    } else {
-        criticalItems.forEach(c => {
-            criticalHtml += `
-                <div class="bg-white p-3 mb-2 rounded border border-red-100 shadow-sm">
-                    <div class="flex justify-between items-center mb-1">
-                        <span class="font-bold text-gray-800 text-xs">ID: ${c.idRA}</span>
-                        <span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 rounded">Nota: ${c.nota || 'S/N'}</span>
-                    </div>
-                    <p class="text-xs text-gray-600 truncate">${c.cliente}</p>
-                    <p class="text-xs text-gray-500 font-bold mt-1">Motivo: ${c.categoria}</p>
-                </div>
-            `;
-        });
-    }
-    divCritical.innerHTML = criticalHtml;
-}
-
-window.updateRATable = function() {
-    const tableFilterElement = document.getElementById('raTableFilter');
-    const tableFilter = tableFilterElement ? tableFilterElement.value : 'all';
-
-    const scoreFilterElement = document.getElementById('raScoreFilter');
-    const scoreFilter = scoreFilterElement ? scoreFilterElement.value : 'all';
-    
-    const catFilterElement = document.getElementById('raCategoryFilter');
-    const catFilter = catFilterElement ? catFilterElement.value : 'all';
-
-    let tableData = currentPeriodData;
-
-    // Aplica Filtro de Status
-    if (tableFilter === 'avaliadas') {
-        tableData = tableData.filter(row => row.nota !== '');
-    } else if (tableFilter === 'respondidas') {
-        tableData = tableData.filter(row => row.status.toLowerCase().includes('respondid'));
-    } else if (tableFilter === 'excluidas') {
-        tableData = tableData.filter(row => row.status.toLowerCase().includes('excluíd') || row.status.toLowerCase().includes('desativada'));
-    }
-
-    // Aplica Filtro de Nota
-    if (scoreFilter !== 'all') {
-        tableData = tableData.filter(row => String(row.nota).trim() === String(scoreFilter).trim());
-    }
-    
-    // Aplica Filtro de Categoria (NOVO)
-    if (catFilter !== 'all') {
-        tableData = tableData.filter(row => row.categoria === catFilter);
-    }
-
-    currentVisibleTableData = tableData;
-
-    const tbody = document.getElementById('raTableBody');
-    let tbodyHtml = ''; 
-
-    tableData.forEach(row => {
-        let notaBadge = `<span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">N/I</span>`;
-        if(row.nota !== '') {
-            let color = 'bg-yellow-200 text-yellow-800'; 
-            if(parseInt(row.nota) >= 7) color = 'bg-green-200 text-green-800'; 
-            if(parseInt(row.nota) <= 3) color = 'bg-red-200 text-red-800'; 
-            notaBadge = `<span class="${color} px-2 py-1 rounded text-xs font-bold">${row.nota}</span>`;
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
         }
-
-        let dateAberturaExibicao = row.abertura !== '-' ? row.abertura.toString().split(' ')[0] : '-';
-        let dateRespostaExibicao = row.respondido !== '-' ? row.respondido.toString().split(' ')[0] : '-';
-
-        tbodyHtml += `
-            <tr class="border-b hover:bg-gray-50">
-                <td class="p-2 border whitespace-nowrap text-xs">${dateAberturaExibicao}</td>
-                <td class="p-2 border whitespace-nowrap text-xs text-blue-700 font-semibold">${dateRespostaExibicao}</td>
-                <td class="p-2 border text-gray-800 font-bold font-mono text-xs">${row.pedido}</td>
-                <td class="p-2 border font-mono font-bold text-indigo-600">${row.ticket}</td>
-                <td class="p-2 border font-mono font-bold text-purple-700">${row.idRA}</td>
-                <td class="p-2 border text-gray-800 max-w-[150px] truncate" title="${row.cliente}">${row.cliente}</td>
-                <td class="p-2 border text-xs font-semibold text-gray-600 uppercase">${row.status}</td>
-                <td class="p-2 border text-center">${notaBadge}</td>
-                <td class="p-2 border text-xs text-gray-600">${row.categoria}</td>
-            </tr>
-        `;
     });
-    
-    if (tableData.length === 0) {
-        tbodyHtml = `<tr><td colspan="9" class="p-6 text-center text-gray-500 font-bold bg-gray-50">Nenhum registro encontrado para a combinação destes filtros no período.</td></tr>`;
-    }
 
-    tbody.innerHTML = tbodyHtml; 
+    // ==========================================
+    // ATUALIZA TABELA DETALHADA
+    // ==========================================
+    const tbody = $('raTableBody');
+    if (fd.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-gray-500 font-bold">Nenhum registro encontrado para esta combinação.</td></tr>`;
+    } else {
+        let html = '';
+        fd.forEach(r => {
+            let badge = r.nota === '' ? `<span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">N/I</span>` : `<span class="${parseInt(r.nota)>=7?'bg-green-200 text-green-800':parseInt(r.nota)<=3?'bg-red-200 text-red-800':'bg-yellow-200 text-yellow-800'} px-2 py-1 rounded text-xs font-bold">${r.nota}</span>`;
+            html += `<tr class="border-b hover:bg-gray-50">
+                        <td class="p-2 border text-xs">${r.abertura !== '-' ? r.abertura.toString().split(' ')[0] : '-'}</td>
+                        <td class="p-2 border text-xs text-blue-700 font-semibold">${r.respondido !== '-' ? r.respondido.toString().split(' ')[0] : '-'}</td>
+                        <td class="p-2 border font-mono font-bold text-xs">${r.pedido}</td>
+                        <td class="p-2 border font-mono font-bold text-indigo-600">${r.ticket}</td>
+                        <td class="p-2 border font-mono font-bold text-purple-700">${r.idRA}</td>
+                        <td class="p-2 border max-w-[150px] truncate" title="${r.cliente}">${r.cliente}</td>
+                        <td class="p-2 border text-xs font-semibold text-gray-600 uppercase">${r.status}</td>
+                        <td class="p-2 border text-center">${badge}</td>
+                        <td class="p-2 border text-xs">${r.categoria}</td>
+                    </tr>`;
+        });
+        tbody.innerHTML = html;
+    }
     
     updateERPDashboard();
 }
 
 window.copyRATableData = function() {
-    const dataToCopy = currentVisibleTableData || [];
-    if(dataToCopy.length === 0) {
-        alert("Não há dados na tabela para copiar!");
-        return;
-    }
-    let tsvData = "Data Abertura\tData Resposta\tPedido\tTicket\tID\tCliente\tStatus\tNota\tCategoria\n";
-    dataToCopy.forEach(row => {
-        let dateAb = row.abertura !== '-' ? row.abertura.toString().split(' ')[0] : '-';
-        let dateRe = row.respondido !== '-' ? row.respondido.toString().split(' ')[0] : '-';
-        let notaStr = row.nota !== '' ? row.nota : 'N/I';
-        tsvData += `${dateAb}\t${dateRe}\t${row.pedido}\t${row.ticket}\t${row.idRA}\t${row.cliente}\t${row.status}\t${notaStr}\t${row.categoria}\n`;
-    });
-    navigator.clipboard.writeText(tsvData).then(() => { alert(`Sucesso! Tabela inteira com ${dataToCopy.length} registros copiada.`); });
+    if(currentVisibleTableData.length === 0) { alert("Não há dados!"); return; }
+    let tsv = "Data Abertura\tData Resposta\tPedido\tTicket\tID\tCliente\tStatus\tNota\tCategoria\n";
+    currentVisibleTableData.forEach(r => tsv += `${r.abertura.split(' ')[0]}\t${r.respondido.split(' ')[0]}\t${r.pedido}\t${r.ticket}\t${r.idRA}\t${r.cliente}\t${r.status}\t${r.nota || 'N/I'}\t${r.categoria}\n`);
+    navigator.clipboard.writeText(tsv).then(() => alert("Copiado!"));
 }
 
-window.copyRAColumn = function(columnKey) {
-    const dataToCopy = currentVisibleTableData || [];
-    if(dataToCopy.length === 0) {
-        alert("A tabela está vazia. Não há o que copiar."); return;
-    }
-    let textToCopy = "";
-    dataToCopy.forEach(row => {
-        let val = "";
-        if (columnKey === 'abertura') { val = row.abertura !== '-' ? row.abertura.toString().split(' ')[0] : '-'; }
-        else if (columnKey === 'respondido') { val = row.respondido !== '-' ? row.respondido.toString().split(' ')[0] : '-'; }
-        else if (columnKey === 'nota') { val = row.nota !== '' ? row.nota : 'N/I'; }
-        else { val = row[columnKey] !== undefined ? row[columnKey] : '-'; }
-        textToCopy += `${val}\n`;
+window.copyRAColumn = function(colKey) {
+    if(currentVisibleTableData.length === 0) { alert("Não há dados!"); return; }
+    let text = "";
+    currentVisibleTableData.forEach(r => {
+        let val = (colKey === 'abertura' || colKey === 'respondido') ? r[colKey].split(' ')[0] : colKey === 'nota' ? (r.nota || 'N/I') : r[colKey];
+        text += `${val}\n`;
     });
-    navigator.clipboard.writeText(textToCopy).then(() => { alert(`Sucesso! Os dados desta coluna (${dataToCopy.length} registros) foram copiados.`); });
+    navigator.clipboard.writeText(text).then(() => alert("Coluna copiada!"));
 }
 
 // =============================================================
-// ================= CRUZAMENTO ERP (NOVO) =====================
+// ================= CRUZAMENTO ERP (TRANSPORTADORA) ===========
 // =============================================================
 
 window.handleERPFileUpload = function(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
+    const file = event.target.files[0]; if (!file) return;
     const reader = new FileReader();
-    reader.onload = function(e) {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, {type: 'array'});
-        const sheetName = workbook.SheetNames[0];
-        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "", raw: false });
-        processERPData(jsonData);
+    reader.onload = e => {
+        const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+        processERPData(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "", raw: false }));
     };
-    reader.readAsArrayBuffer(file);
-    event.target.value = ''; 
+    reader.readAsArrayBuffer(file); event.target.value = ''; 
 }
 
 function processERPData(data) {
-    erpDataMap = {}; 
-    let foundRows = 0;
-
+    erpDataMap = {}; let found = 0;
     data.forEach(row => {
-        const rowNorm = {};
-        for(let key in row) { rowNorm[key.trim().toLowerCase()] = row[key]; }
+        const rN = {}; for(let k in row) rN[k.trim().toLowerCase()] = row[k];
+        const kPedido = findKeyByKeywords(rN, listaChavesPedido);
+        const kEstado = findKeyByKeywords(rN, ['estado', 'uf', 'província']);
+        const kPag = findKeyByKeywords(rN, ['formapagamento', 'pagamento', 'forma de pagamento']);
 
-        const kPedido = findKeyByKeywords(rowNorm, listaChavesPedido);
-        const kEstado = findKeyByKeywords(rowNorm, ['estado', 'uf', 'província']);
-        const kPagamento = findKeyByKeywords(rowNorm, ['formapagamento', 'pagamento', 'forma de pagamento']);
-
-        if (kPedido && kEstado) {
-            const pedido = rowNorm[kPedido].toString().trim();
-            const estado = rowNorm[kEstado].toString().trim().toUpperCase();
-            const pagamento = kPagamento ? rowNorm[kPagamento].toString().trim() : 'NÃO ESPECIFICADO';
-            
-            if(pedido) {
-                erpDataMap[pedido] = { estado: estado, pagamento: pagamento };
-                foundRows++;
-            }
+        if (kPedido && kEstado && rN[kPedido].toString().trim()) {
+            erpDataMap[rN[kPedido].toString().trim()] = { 
+                estado: rN[kEstado].toString().trim().toUpperCase(), 
+                pagamento: kPag ? rN[kPag].toString().trim() : 'NÃO ESPECIFICADO' 
+            };
+            found++;
         }
     });
 
-    if (foundRows === 0) {
-        alert("Não conseguimos encontrar as colunas de 'Pedido' e 'Estado/UF' na sua planilha. Verifique o arquivo e tente novamente.");
-        return;
-    }
-
-    document.getElementById('emptyStateERP').classList.add('hidden');
-    document.getElementById('uiAreaERP').classList.remove('hidden');
-    document.getElementById('uiAreaERP').classList.add('flex');
-
+    if (found === 0) { alert("Não encontramos 'Pedido' e 'Estado' na planilha ERP."); return; }
+    $('emptyStateERP').classList.add('hidden');
+    $('uiAreaERP').classList.remove('hidden'); $('uiAreaERP').classList.add('flex');
     updateERPDashboard();
 }
 
 function updateERPDashboard() {
     if (Object.keys(erpDataMap).length === 0) return;
 
-    let stateCounts = {};
-    let payCounts = {};
-    
-    // NOVA ESTRUTURA PARA A TABELA: Categoria -> Estado -> Contagem
-    let categoryStateCounts = {};
+    let stateCounts = {}, payCounts = {}, catStateCounts = {};
 
     currentVisibleTableData.forEach(row => {
         if(row.pedido && row.pedido !== '-') {
-            
-            let erpData = erpDataMap[row.pedido];
-            let estado = erpData ? erpData.estado : 'NÃO ENCONTRADO NO ERP';
-            let pagamento = erpData ? erpData.pagamento : 'NÃO ENCONTRADO NO ERP';
+            let erp = erpDataMap[row.pedido] || { estado: 'NÃO ENCONTRADO NO ERP', pagamento: 'NÃO ENCONTRADO NO ERP' };
             let cat = row.categoria || 'Sem categoria';
             
-            stateCounts[estado] = (stateCounts[estado] || 0) + 1;
-            payCounts[pagamento] = (payCounts[pagamento] || 0) + 1;
-            
-            // AGRUPAMENTO INVERTIDO (Categoria -> Estado)
-            if(!categoryStateCounts[cat]) categoryStateCounts[cat] = {};
-            categoryStateCounts[cat][estado] = (categoryStateCounts[cat][estado] || 0) + 1;
+            stateCounts[erp.estado] = (stateCounts[erp.estado] || 0) + 1;
+            payCounts[erp.pagamento] = (payCounts[erp.pagamento] || 0) + 1;
+            if(!catStateCounts[cat]) catStateCounts[cat] = {};
+            catStateCounts[cat][erp.estado] = (catStateCounts[cat][erp.estado] || 0) + 1;
         }
     });
 
-    // =========== 1. GRÁFICO ESTADO ===========
-    const sortedStates = Object.keys(stateCounts).sort((a, b) => stateCounts[b] - stateCounts[a]);
-    const chartStates = sortedStates.slice(0, 10);
-    const chartData = chartStates.map(st => stateCounts[st]);
-
+    // Gráficos ERP
+    const sortedSt = Object.keys(stateCounts).sort((a,b) => stateCounts[b] - stateCounts[a]).slice(0,10);
     if(erpStateChartInstance) erpStateChartInstance.destroy();
-    const ctxState = document.getElementById('erpStateChart').getContext('2d');
-    erpStateChartInstance = new Chart(ctxState, {
-        type: 'bar',
-        data: { labels: chartStates, datasets: [{ label: 'Reclamações Filtradas', data: chartData, backgroundColor: '#6366f1', borderRadius: 4 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+    erpStateChartInstance = new Chart($('erpStateChart').getContext('2d'), {
+        type: 'bar', data: { labels: sortedSt, datasets: [{ data: sortedSt.map(s => stateCounts[s]), backgroundColor: '#6366f1', borderRadius: 4 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
     });
 
-    // =========== 2. GRÁFICO PAGAMENTO ===========
-    const payLabels = Object.keys(payCounts);
-    const payData = Object.values(payCounts);
-    
     if(erpPayChartInstance) erpPayChartInstance.destroy();
-    const ctxPay = document.getElementById('erpPayChart').getContext('2d');
-    
-    erpPayChartInstance = new Chart(ctxPay, {
-        type: 'doughnut',
-        data: {
-            labels: payLabels,
-            datasets: [{
-                data: payData,
-                backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'],
-                borderWidth: 1
-            }]
-        },
+    erpPayChartInstance = new Chart($('erpPayChart').getContext('2d'), {
+        type: 'doughnut', data: { labels: Object.keys(payCounts), datasets: [{ data: Object.values(payCounts), backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'] }] },
         options: { responsive: true, maintainAspectRatio: false }
     });
 
-    // =========== 3. TABELA INVERTIDA ===========
-    const tbody = document.getElementById('erpTableBody');
-    let html = '';
-
-    // Ordena as categorias pelo volume total (para as mais problemáticas ficarem no topo)
-    const sortedCats = Object.keys(categoryStateCounts).sort((a, b) => {
-        const totalA = Object.values(categoryStateCounts[a]).reduce((sum, val) => sum + val, 0);
-        const totalB = Object.values(categoryStateCounts[b]).reduce((sum, val) => sum + val, 0);
-        return totalB - totalA;
-    });
-
-    sortedCats.forEach(cat => {
-        const states = categoryStateCounts[cat];
-        // Ordena os estados dentro daquela categoria
-        const sortedCategoryStates = Object.keys(states).sort((a,b) => states[b] - states[a]);
-        
-        sortedCategoryStates.forEach(st => {
-            html += `<tr class="border-b hover:bg-indigo-50 transition">
-                        <td class="p-2 border font-bold text-gray-700 bg-gray-50">${cat}</td>
-                        <td class="p-2 border text-gray-600">${st}</td>
-                        <td class="p-2 border text-center font-bold text-indigo-600">${states[st]}</td>
-                     </tr>`;
-        });
-    });
-
-    if (sortedCats.length === 0) { html = `<tr><td colspan="3" class="p-6 text-center text-gray-500">Nenhum cruzamento encontrado para os filtros atuais.</td></tr>`; }
-    tbody.innerHTML = html;
+    // Tabela ERP
+    const sortedCats = Object.keys(catStateCounts).sort((a, b) => Object.values(catStateCounts[b]).reduce((x,y)=>x+y,0) - Object.values(catStateCounts[a]).reduce((x,y)=>x+y,0));
+    
+    $('erpTableBody').innerHTML = sortedCats.length === 0 ? `<tr><td colspan="3" class="p-6 text-center text-gray-500">Nenhum cruzamento encontrado.</td></tr>` : 
+    sortedCats.map(cat => Object.keys(catStateCounts[cat]).sort((a,b)=>catStateCounts[cat][b]-catStateCounts[cat][a]).map(st => 
+        `<tr class="border-b hover:bg-indigo-50"><td class="p-2 border font-bold text-gray-700 bg-gray-50">${cat}</td><td class="p-2 border">${st}</td><td class="p-2 border text-center font-bold text-indigo-600">${catStateCounts[cat][st]}</td></tr>`
+    ).join('')).join('');
 }
 
 window.copyERPTableData = function() {
-    const tbody = document.getElementById('erpTableBody');
-    const rows = tbody.querySelectorAll('tr');
-    
-    if(rows.length === 0 || rows[0].innerText.includes('Nenhum cruzamento')) { alert("Não há dados para copiar."); return; }
-
+    const rows = $('erpTableBody').querySelectorAll('tr');
+    if(rows.length === 0 || rows[0].innerText.includes('Nenhum cruzamento')) return alert("Não há dados.");
     let tsv = "Categoria Ocorrência\tEstado/UF\tQuantidade\n";
-    rows.forEach(tr => {
-        const tds = tr.querySelectorAll('td');
-        if(tds.length === 3) { tsv += `${tds[0].innerText}\t${tds[1].innerText}\t${tds[2].innerText}\n`; }
-    });
-    navigator.clipboard.writeText(tsv).then(() => { alert("Tabela de Categoria e Estados copiada com sucesso!"); });
+    rows.forEach(tr => { const tds = tr.querySelectorAll('td'); if(tds.length === 3) tsv += `${tds[0].innerText}\t${tds[1].innerText}\t${tds[2].innerText}\n`; });
+    navigator.clipboard.writeText(tsv).then(() => alert("Copiado!"));
 }
