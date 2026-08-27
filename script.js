@@ -25,10 +25,8 @@ let currentModule = 'module-logistica';
 // =============== FUNÇÕES ÚTEIS E GLOBAIS =====================
 // =============================================================
 
-// CHAVES UNIVERSAIS PARA PROCURAR A COLUNA "PEDIDO" (Funciona para 30h+, RA e ERP)
 const listaChavesPedido = ['pedido', 'idvenda', 'id_venda', 'id venda', 'número do pedido', 'numero do pedido', 'nº pedido'];
 
-// Função universal para achar nome da coluna perdoando letras maiusculas e minúsculas
 function findKeyByKeywords(obj, keywords) {
     const keys = Object.keys(obj);
     for (let k of keys) {
@@ -203,7 +201,6 @@ function processNewData(data) {
         const rowNormalized = {};
         for(let key in row) { rowNormalized[key.trim().toLowerCase()] = row[key]; }
         
-        // USA A BUSCA UNIVERSAL DE PEDIDOS
         const kPedido = findKeyByKeywords(rowNormalized, listaChavesPedido);
         const idPedido = kPedido ? rowNormalized[kPedido].toString().trim() : '';
         
@@ -399,7 +396,7 @@ let currentVisibleTableData = [];
 let raCategoryChartInstance = null; 
 let raScoreChartInstance = null;    
 
-// VARIÁVEL PARA O ERP AGORA ARMAZENA ESTADO E PAGAMENTO
+// VARIÁVEIS ERP
 let erpDataMap = {}; 
 let erpStateChartInstance = null;
 let erpPayChartInstance = null;
@@ -478,10 +475,7 @@ function processRAData(data) {
 
         const kAbertura = findKeyByKeywords(rowNorm, ['entrada', 'data de abertura', 'criado']);
         const kRespondido = findKeyByKeywords(rowNorm, ['data da resposta', 'respondida em']);
-        
-        // USA A BUSCA UNIVERSAL DE PEDIDOS
         const kPedido = findKeyByKeywords(rowNorm, listaChavesPedido);
-        
         const kTicket = findKeyByKeywords(rowNorm, ['ticket']);
         const kID = findKeyByKeywords(rowNorm, ['id']);
         const kCliente = findKeyByKeywords(rowNorm, ['cliente', 'nome do consumidor']);
@@ -509,6 +503,7 @@ function processRAData(data) {
         }
 
         const aberturaStr = kAbertura ? rowNorm[kAbertura].toString().trim() : '-';
+        const categoriaFinal = kCategoria ? rowNorm[kCategoria].toString().trim() : 'Não categorizado';
 
         const record = {
             abertura: aberturaStr,
@@ -520,11 +515,22 @@ function processRAData(data) {
             cliente: kCliente ? rowNorm[kCliente].toString().trim() : '-',
             status: kStatus ? rowNorm[kStatus].toString().trim() : 'Sem Status',
             nota: notaVal,
-            categoria: kCategoria ? rowNorm[kCategoria].toString().trim() : 'Não categorizado'
+            categoria: categoriaFinal
         };
 
         raDataAll.push(record);
     });
+
+    // === POPULA O MENU DINÂMICO DE CATEGORIAS ===
+    const categoryFilterElement = document.getElementById('raCategoryFilter');
+    if (categoryFilterElement) {
+        let uniqueCats = [...new Set(raDataAll.map(item => item.categoria))].filter(c => c !== '').sort();
+        let catHtml = '<option value="all">Filtro: Todos os Motivos</option>';
+        uniqueCats.forEach(c => {
+            catHtml += `<option value="${c}">${c}</option>`;
+        });
+        categoryFilterElement.innerHTML = catHtml;
+    }
 
     setRADefaultDates();
     
@@ -610,19 +616,9 @@ function renderRADashboard(periodData) {
         type: 'bar',
         data: {
             labels: scoreLabels,
-            datasets: [{
-                label: 'Qtd Reclamações',
-                data: scoreData,
-                backgroundColor: scoreColors, 
-                borderRadius: 4
-            }]
+            datasets: [{ label: 'Qtd Reclamações', data: scoreData, backgroundColor: scoreColors, borderRadius: 4 }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-        }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
     });
 
     if(raCategoryChartInstance) raCategoryChartInstance.destroy();
@@ -635,12 +631,7 @@ function renderRADashboard(periodData) {
         type: 'bar',
         data: {
             labels: catLabels.length > 0 ? catLabels : ['Sem notas 0 no período'],
-            datasets: [{
-                label: 'Qtd Detratores',
-                data: catData.length > 0 ? catData : [0],
-                backgroundColor: '#ef4444', 
-                borderRadius: 4
-            }]
+            datasets: [{ label: 'Qtd Detratores', data: catData.length > 0 ? catData : [0], backgroundColor: '#ef4444', borderRadius: 4 }]
         },
         options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } }
     });
@@ -673,9 +664,13 @@ window.updateRATable = function() {
 
     const scoreFilterElement = document.getElementById('raScoreFilter');
     const scoreFilter = scoreFilterElement ? scoreFilterElement.value : 'all';
+    
+    const catFilterElement = document.getElementById('raCategoryFilter');
+    const catFilter = catFilterElement ? catFilterElement.value : 'all';
 
     let tableData = currentPeriodData;
 
+    // Aplica Filtro de Status
     if (tableFilter === 'avaliadas') {
         tableData = tableData.filter(row => row.nota !== '');
     } else if (tableFilter === 'respondidas') {
@@ -684,8 +679,14 @@ window.updateRATable = function() {
         tableData = tableData.filter(row => row.status.toLowerCase().includes('excluíd') || row.status.toLowerCase().includes('desativada'));
     }
 
+    // Aplica Filtro de Nota
     if (scoreFilter !== 'all') {
         tableData = tableData.filter(row => String(row.nota).trim() === String(scoreFilter).trim());
+    }
+    
+    // Aplica Filtro de Categoria (NOVO)
+    if (catFilter !== 'all') {
+        tableData = tableData.filter(row => row.categoria === catFilter);
     }
 
     currentVisibleTableData = tableData;
@@ -763,7 +764,7 @@ window.copyRAColumn = function(columnKey) {
 }
 
 // =============================================================
-// ================= CRUZAMENTO ERP ============================
+// ================= CRUZAMENTO ERP (NOVO) =====================
 // =============================================================
 
 window.handleERPFileUpload = function(event) {
@@ -790,11 +791,8 @@ function processERPData(data) {
         const rowNorm = {};
         for(let key in row) { rowNorm[key.trim().toLowerCase()] = row[key]; }
 
-        // BUSCA UNIVERSAL DE PEDIDOS
         const kPedido = findKeyByKeywords(rowNorm, listaChavesPedido);
         const kEstado = findKeyByKeywords(rowNorm, ['estado', 'uf', 'província']);
-        
-        // NOVA BUSCA: Forma de Pagamento
         const kPagamento = findKeyByKeywords(rowNorm, ['formapagamento', 'pagamento', 'forma de pagamento']);
 
         if (kPedido && kEstado) {
@@ -803,7 +801,6 @@ function processERPData(data) {
             const pagamento = kPagamento ? rowNorm[kPagamento].toString().trim() : 'NÃO ESPECIFICADO';
             
             if(pedido) {
-                // Guarda um objeto ao invés de apenas uma string
                 erpDataMap[pedido] = { estado: estado, pagamento: pagamento };
                 foundRows++;
             }
@@ -826,8 +823,10 @@ function updateERPDashboard() {
     if (Object.keys(erpDataMap).length === 0) return;
 
     let stateCounts = {};
-    let stateCategoryCounts = {};
     let payCounts = {};
+    
+    // NOVA ESTRUTURA PARA A TABELA: Categoria -> Estado -> Contagem
+    let categoryStateCounts = {};
 
     currentVisibleTableData.forEach(row => {
         if(row.pedido && row.pedido !== '-') {
@@ -835,13 +834,14 @@ function updateERPDashboard() {
             let erpData = erpDataMap[row.pedido];
             let estado = erpData ? erpData.estado : 'NÃO ENCONTRADO NO ERP';
             let pagamento = erpData ? erpData.pagamento : 'NÃO ENCONTRADO NO ERP';
+            let cat = row.categoria || 'Sem categoria';
             
             stateCounts[estado] = (stateCounts[estado] || 0) + 1;
             payCounts[pagamento] = (payCounts[pagamento] || 0) + 1;
             
-            if(!stateCategoryCounts[estado]) stateCategoryCounts[estado] = {};
-            let cat = row.categoria || 'Sem categoria';
-            stateCategoryCounts[estado][cat] = (stateCategoryCounts[estado][cat] || 0) + 1;
+            // AGRUPAMENTO INVERTIDO (Categoria -> Estado)
+            if(!categoryStateCounts[cat]) categoryStateCounts[cat] = {};
+            categoryStateCounts[cat][estado] = (categoryStateCounts[cat][estado] || 0) + 1;
         }
     });
 
@@ -878,24 +878,32 @@ function updateERPDashboard() {
         options: { responsive: true, maintainAspectRatio: false }
     });
 
-    // =========== 3. TABELA ===========
+    // =========== 3. TABELA INVERTIDA ===========
     const tbody = document.getElementById('erpTableBody');
     let html = '';
 
-    sortedStates.forEach(st => {
-        const cats = stateCategoryCounts[st];
-        const sortedCats = Object.keys(cats).sort((a,b) => cats[b] - cats[a]);
+    // Ordena as categorias pelo volume total (para as mais problemáticas ficarem no topo)
+    const sortedCats = Object.keys(categoryStateCounts).sort((a, b) => {
+        const totalA = Object.values(categoryStateCounts[a]).reduce((sum, val) => sum + val, 0);
+        const totalB = Object.values(categoryStateCounts[b]).reduce((sum, val) => sum + val, 0);
+        return totalB - totalA;
+    });
+
+    sortedCats.forEach(cat => {
+        const states = categoryStateCounts[cat];
+        // Ordena os estados dentro daquela categoria
+        const sortedCategoryStates = Object.keys(states).sort((a,b) => states[b] - states[a]);
         
-        sortedCats.forEach(cat => {
+        sortedCategoryStates.forEach(st => {
             html += `<tr class="border-b hover:bg-indigo-50 transition">
-                        <td class="p-2 border font-bold text-gray-700 bg-gray-50">${st}</td>
-                        <td class="p-2 border text-gray-600">${cat}</td>
-                        <td class="p-2 border text-center font-bold text-indigo-600">${cats[cat]}</td>
+                        <td class="p-2 border font-bold text-gray-700 bg-gray-50">${cat}</td>
+                        <td class="p-2 border text-gray-600">${st}</td>
+                        <td class="p-2 border text-center font-bold text-indigo-600">${states[st]}</td>
                      </tr>`;
         });
     });
 
-    if (sortedStates.length === 0) { html = `<tr><td colspan="3" class="p-6 text-center text-gray-500">Nenhum cruzamento encontrado.</td></tr>`; }
+    if (sortedCats.length === 0) { html = `<tr><td colspan="3" class="p-6 text-center text-gray-500">Nenhum cruzamento encontrado para os filtros atuais.</td></tr>`; }
     tbody.innerHTML = html;
 }
 
@@ -905,10 +913,10 @@ window.copyERPTableData = function() {
     
     if(rows.length === 0 || rows[0].innerText.includes('Nenhum cruzamento')) { alert("Não há dados para copiar."); return; }
 
-    let tsv = "Estado/UF\tCategoria Ocorrência\tQuantidade\n";
+    let tsv = "Categoria Ocorrência\tEstado/UF\tQuantidade\n";
     rows.forEach(tr => {
         const tds = tr.querySelectorAll('td');
         if(tds.length === 3) { tsv += `${tds[0].innerText}\t${tds[1].innerText}\t${tds[2].innerText}\n`; }
     });
-    navigator.clipboard.writeText(tsv).then(() => { alert("Tabela de Estados e Categorias copiada com sucesso!"); });
+    navigator.clipboard.writeText(tsv).then(() => { alert("Tabela de Categoria e Estados copiada com sucesso!"); });
 }
